@@ -1483,3 +1483,11 @@ A "Tutor is writing…" with a spinner; opening A showed its full answer, stream
 its own messages and RTL. Reload → both lessons back, A active. Upload screen showed "Continue a lesson";
 deleting a lesson updated the list, the badge and storage. Cancelling a lesson while it was being planned
 removed it. `eslint` passes, production build OK.
+
+---
+
+## 2026-10-22 — Local context file for AI agents
+
+Added `AGENTS.md` (read automatically by Codex and similar agents) with the project context, working rules,
+architecture map, decisions, known weaknesses and remaining work, so another coding agent can continue from
+here. Kept **out of git** like `HANDOFF.md`; `.gitignore` now also lists `AGENTS.md` and `CHECKLIST.md`.

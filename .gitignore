@@ -5,5 +5,7 @@ dist/
 .DS_Store
 *.log
 
-# Notes passed between Claude sessions, not part of the project.
+# Local notes for AI coding sessions and work tracking, not part of the project.
 HANDOFF.md
+AGENTS.md
+CHECKLIST.md
