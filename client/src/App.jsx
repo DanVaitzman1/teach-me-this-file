@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BookIcon, GearIcon, KeyIcon } from './components/Icons'
 import ServerStatus from './components/ServerStatus'
 import LessonScreen from './features/lesson/LessonScreen'
 import PlanningScreen from './features/lesson/PlanningScreen'
@@ -38,24 +39,47 @@ function App() {
     }
   }
 
+  const inLesson = lesson.status === 'ready' || lesson.status === 'finished'
+  const hasKey = Boolean(apiKey) || server.hasServerKey
+
   return (
-    <div className="min-h-dvh bg-slate-50 text-slate-900">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-        <h1 className="text-lg font-bold text-indigo-600">Teach Me This File</h1>
-        <button
-          onClick={openSettings}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
-        >
-          Settings
-        </button>
+    <div className="min-h-dvh bg-gradient-to-b from-indigo-50/70 via-slate-50 to-slate-50 text-slate-900">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-8 place-items-center rounded-lg bg-indigo-600 text-white shadow-sm">
+              <BookIcon className="size-5" />
+            </span>
+            <h1 className="font-bold tracking-tight text-slate-900">Teach Me This File</h1>
+          </div>
+          <button
+            onClick={openSettings}
+            className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            {server.status === 'ready' && (
+              <span
+                className={`size-2 rounded-full ${hasKey ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                title={hasKey ? 'API key set' : 'No API key yet'}
+              />
+            )}
+            <GearIcon className="size-4" />
+            Settings
+          </button>
+        </div>
       </header>
 
-      <main className={`mx-auto space-y-4 p-4 ${lesson.status === 'ready' || lesson.status === 'finished' ? 'max-w-5xl' : 'max-w-2xl'}`}>
+      <main className={`mx-auto space-y-4 p-4 ${inLesson ? 'max-w-5xl' : 'max-w-2xl'}`}>
         <ServerStatus status={server.status} onRetry={server.retry} />
 
         {needsApiKey && (
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <span>Add a Gemini API key to start a lesson.</span>
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-700">
+              <KeyIcon className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <b className="font-semibold">Add your Gemini API key to start.</b> It’s free from Google AI Studio and
+              stays in this tab.
+            </span>
             <button
               onClick={openSettings}
               className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 font-medium text-white hover:bg-amber-700"

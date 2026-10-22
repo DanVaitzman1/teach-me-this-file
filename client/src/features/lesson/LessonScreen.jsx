@@ -1,3 +1,4 @@
+import { DocumentIcon } from '../../components/Icons'
 import RichText from '../../components/RichText'
 import ChatPanel from '../chat/ChatPanel'
 import LessonProgress from './LessonProgress'
@@ -11,7 +12,7 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
   const doneUpTo = finished ? plan.steps.length : currentStepIndex
 
   function confirmNewLesson() {
-    if (window.confirm('Start a new lesson? This lesson will be lost.')) onNewLesson()
+    if (finished || window.confirm('Start a new lesson? This lesson will be lost.')) onNewLesson()
   }
 
   // The whole lesson takes the plan's direction, so in Hebrew or Arabic the
@@ -19,17 +20,25 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
   return (
     <div dir={plan.dir} lang={plan.language} className="space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-0.5">
-          <h2 className="text-xl font-semibold">
+        <div className="min-w-0 space-y-1.5">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
             <RichText inline>{plan.title}</RichText>
           </h2>
-          <p className="text-sm text-slate-600">
-            {plan.audience} · <span dir="auto">{document.fileName}</span>
-          </p>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-indigo-50 px-2.5 py-1 font-medium text-indigo-700 ring-1 ring-indigo-100">
+              {plan.audience}
+            </span>
+            <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-white px-2.5 py-1 text-slate-600 ring-1 ring-slate-200">
+              <DocumentIcon className="size-3.5 shrink-0" />
+              <span dir="auto" className="truncate">
+                {document.fileName}
+              </span>
+            </span>
+          </div>
         </div>
         <button
           onClick={confirmNewLesson}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
         >
           New lesson
         </button>
@@ -41,13 +50,13 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
         </p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
-        <aside className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 lg:self-start">
-          <LessonProgress current={Math.min(doneUpTo + 1, plan.steps.length)} total={plan.steps.length} />
+      <div className="grid gap-4 lg:grid-cols-[17rem_1fr]">
+        <aside className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-20 lg:self-start">
+          <LessonProgress current={Math.min(doneUpTo + 1, plan.steps.length)} done={doneUpTo} total={plan.steps.length} />
           {/* Phones: the outline folds away so the lesson stays on screen. */}
           <details className="lg:hidden">
             <summary className="cursor-pointer text-sm font-medium text-slate-600">All steps</summary>
-            <div className="mt-2">
+            <div className="mt-3">
               <StepList steps={plan.steps} currentIndex={doneUpTo} />
             </div>
           </details>
@@ -56,9 +65,12 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
           </div>
         </aside>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <div className="space-y-0.5 border-b border-slate-200 px-4 py-3">
-            <h3 className="font-semibold">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 bg-gradient-to-r from-indigo-50/80 to-white px-4 py-3 rtl:bg-gradient-to-l">
+            <p className="text-xs font-semibold tracking-wide text-indigo-600 uppercase">
+              {finished ? 'Lesson complete' : `Step ${currentStepIndex + 1}`}
+            </p>
+            <h3 className="font-semibold text-slate-900">
               <RichText inline>{step.title}</RichText>
             </h3>
             <p className="text-sm text-slate-600">

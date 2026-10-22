@@ -1315,3 +1315,53 @@ above. That's not checking understanding.
 **Change (`server/src/ai/tutor.js`):** new rule — "Never ask a question whose answer your same message just
 gave. Ask the student to use what you taught (e.g. 'which comes right after X?'), or give a hint and let them
 work it out." Not yet re-verified with a real key.
+
+---
+
+## 2026-10-22 — UI polish for the rest of the app
+
+Goal (Dan): make every screen as friendly as the new upload screen.
+
+### Changes (client)
+
+- **App header** (`App.jsx`): sticky, translucent with blur; a logo mark (indigo square with a book icon)
+  next to the name; Settings with a gear and a **status dot** — green when a key is available (yours or the
+  server's), amber when not. Page background: a soft indigo-to-slate gradient.
+- **No-key banner**: key icon, "Add your Gemini API key to start. It's free from Google AI Studio and stays
+  in this tab."
+- **`ServerStatus.jsx`**: a pulsing dot with "Connecting…"; after 3 s "Waking up the server…" with an
+  explanation (free hosting sleeps) and the indeterminate bar; a clearer error with "Try again".
+- **`PlanningScreen.jsx`**: centered card with a pulsing book icon, the file name as a chip, "The tutor is
+  reading the material and splitting it into short steps. 0:07", and **skeleton rows** for the steps being
+  written; the error state reuses the same card with a red icon.
+- **`LessonScreen.jsx`**: bigger title with the audience and file as chips; a step header with a small
+  "STEP 2" / "LESSON COMPLETE" label over a soft gradient; the outline card is sticky on desktop.
+  "New lesson" no longer asks for confirmation once the lesson is finished.
+- **`LessonProgress.jsx`**: "Step 2 of 4" plus a percentage; the bar now shows **completed** steps (it used
+  to count the current one as reached) and turns green when everything is done.
+- **`StepList.jsx`**: a **timeline** — circles joined by a line that turns indigo as steps are completed;
+  current step ringed and bold, upcoming steps greyed. Uses logical `start-*` so it mirrors in RTL.
+- **Chat** (`Message.jsx`, `ChatPanel.jsx`, `Composer.jsx`)
+  - Tutor messages with a gradient **avatar** and a soft grey bubble; student bubbles indigo on the other
+    side; both **ease in** (`.message-in`).
+  - Typing dots inside the bubble; "View source" as a small link with a document icon.
+  - Between steps: a green **"✓ Step 1 complete"** badge, then the next step's name.
+  - **Lesson complete card**: 🎉 with a pop animation, "All N steps done. Great work.", the list of steps
+    checked off, and "Start a new lesson".
+  - **Composer**: one rounded field that grows with the text (up to 160 px) and a round icon button —
+    ↑ Send, or ■ Stop while the tutor writes; hint line "Enter to send · Shift + Enter for a new line".
+- **`SettingsDialog.jsx`**: a status row ("Using your key." / "Using the server's key." / "No key yet…"),
+  monospace key field, and **Remove key**.
+- **`Icons.jsx`**: gear, book, send, stop, document, key icons added (inline SVG, no library).
+- **`index.css`**: `message-in` and `pop-in` keyframes, all animations off under
+  `prefers-reduced-motion`; `html` gets an explicit light background (a dark-mode browser showed its own
+  dark color behind the translucent gradient).
+
+### Verified (browser, stubbed AI)
+
+No-key banner + amber dot; Settings dialog status row; planning screen with skeleton while the plan request
+is held; a full RTL lesson: hint → correct → "Step 1 complete" badge → next step → lesson complete card,
+timeline and green bar at 100%; 375 px layout. `eslint` passes, production build OK.
+
+**Known gap:** on a phone the chat panel starts below the progress card, so the composer is reached by
+scrolling the page.

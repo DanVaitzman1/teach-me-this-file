@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
+import { CheckIcon } from '../../components/Icons'
 import RichText from '../../components/RichText'
 import Composer from './Composer'
 import Message from './Message'
@@ -7,6 +8,56 @@ import SourceDialog from './SourceDialog'
 // Distance from the bottom (px) within which new text keeps the view scrolled
 // down. Further up, the student is reading back and we leave the scroll alone.
 const STICKY_BOTTOM_PX = 80
+
+// Between steps: a small "step done" badge, then the next step's name.
+function StepDivider({ index, title }) {
+  return (
+    <div className="space-y-3 pt-2">
+      {index > 0 && (
+        <p dir="auto" className="message-in mx-auto flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+          <CheckIcon className="size-3.5" /> Step {index} complete
+        </p>
+      )}
+      <p className="flex items-center gap-3 text-xs font-medium text-slate-500">
+        <span className="h-px flex-1 bg-slate-200" />
+        <span>
+          {index + 1}. <RichText inline>{title}</RichText>
+        </span>
+        <span className="h-px flex-1 bg-slate-200" />
+      </p>
+    </div>
+  )
+}
+
+function LessonComplete({ steps, onNewLesson }) {
+  return (
+    <div className="message-in space-y-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 text-center">
+      <p className="pop-in text-4xl" aria-hidden="true">
+        🎉
+      </p>
+      <div dir="auto" className="space-y-1">
+        <p className="text-lg font-bold text-emerald-900">Lesson complete!</p>
+        <p className="text-sm text-emerald-800">All {steps.length} steps done. Great work.</p>
+      </div>
+      <ul className="mx-auto max-w-sm space-y-1.5 text-start text-sm text-slate-700">
+        {steps.map((step) => (
+          <li key={step.id} className="flex items-start gap-2">
+            <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
+              <CheckIcon className="size-3" />
+            </span>
+            <RichText inline>{step.title}</RichText>
+          </li>
+        ))}
+      </ul>
+      <button
+        onClick={onNewLesson}
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+      >
+        Start a new lesson
+      </button>
+    </div>
+  )
+}
 
 export default function ChatPanel({ lesson, onSend, onStop, onRetry, onNewLesson }) {
   const { messages, plan, status, document } = lesson
@@ -27,18 +78,12 @@ export default function ChatPanel({ lesson, onSend, onStop, onRetry, onNewLesson
   }
 
   return (
-    <div className="flex h-[65dvh] min-h-96 flex-col lg:h-[calc(100dvh-14rem)]">
+    <div className="flex h-[65dvh] min-h-96 flex-col lg:h-[calc(100dvh-15rem)]">
       <div ref={listRef} onScroll={handleScroll} role="log" className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.map((message, index) => (
           <Fragment key={message.id}>
             {message.stepIndex !== messages[index - 1]?.stepIndex && (
-              <p className="flex items-center gap-3 text-xs font-medium text-slate-500">
-                <span className="h-px flex-1 bg-slate-200" />
-                <span>
-                  {message.stepIndex + 1}. <RichText inline>{plan.steps[message.stepIndex].title}</RichText>
-                </span>
-                <span className="h-px flex-1 bg-slate-200" />
-              </p>
+              <StepDivider index={message.stepIndex} title={plan.steps[message.stepIndex].title} />
             )}
             <Message
               message={message}
@@ -48,19 +93,7 @@ export default function ChatPanel({ lesson, onSend, onStop, onRetry, onNewLesson
           </Fragment>
         ))}
 
-        {status === 'finished' && (
-          // dir="auto": this English card sits inside a lesson that may be right-to-left.
-          <div dir="auto" className="space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
-            <p className="font-semibold">Lesson complete</p>
-            <p className="text-sm">All {plan.steps.length} steps done.</p>
-            <button
-              onClick={onNewLesson}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-            >
-              Start a new lesson
-            </button>
-          </div>
-        )}
+        {status === 'finished' && <LessonComplete steps={plan.steps} onNewLesson={onNewLesson} />}
       </div>
 
       {sourceIds && (

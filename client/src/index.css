@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* The app is light-themed; without this a dark-mode browser shows its own
+   dark page color behind semi-transparent backgrounds. */
+html {
+  background-color: var(--color-slate-50);
+  color-scheme: light;
+}
+
 /* Formulas are always written left to right, also inside right-to-left text,
    and are never broken across lines: in a right-to-left paragraph the two
    halves of a wrapped formula end up in a confusing order. */
@@ -56,4 +63,38 @@
 }
 .progress-indeterminate {
   animation: slide-across 1.4s ease-in-out infinite;
+}
+
+/* New chat messages ease in instead of popping into place. */
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.message-in {
+  animation: message-in 0.25s ease-out;
+}
+
+/* The celebration emoji at the end of a lesson. */
+@keyframes pop-in {
+  0% {
+    transform: scale(0.3) rotate(-15deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.25) rotate(8deg);
+    opacity: 1;
+  }
+}
+.pop-in {
+  animation: pop-in 0.6s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message-in,
+  .pop-in,
+  .progress-indeterminate {
+    animation: none;
+  }
 }
