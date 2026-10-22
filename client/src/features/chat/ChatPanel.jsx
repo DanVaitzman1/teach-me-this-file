@@ -5,13 +5,14 @@ import Composer from './Composer'
 import Message from './Message'
 import SourceDialog from './SourceDialog'
 import { useT } from '../../i18n/context'
+import { useDisplayPlan } from '../../lesson/useDisplayPlan'
 
 // Distance from the bottom (px) within which new text keeps the view scrolled
 // down. Further up, the student is reading back and we leave the scroll alone.
 const STICKY_BOTTOM_PX = 80
 
 // Between steps: a small "step done" badge, then the next step's name.
-function StepDivider({ index, title }) {
+function StepDivider({ index, title, dir, language }) {
   const t = useT()
   return (
     <div className="space-y-3 pt-2">
@@ -22,7 +23,7 @@ function StepDivider({ index, title }) {
       )}
       <p className="flex items-center gap-3 text-xs font-medium text-slate-500">
         <span className="h-px flex-1 bg-slate-200" />
-        <span>
+        <span dir={dir} lang={language}>
           {index + 1}. <RichText inline>{title}</RichText>
         </span>
         <span className="h-px flex-1 bg-slate-200" />
@@ -62,8 +63,9 @@ function LessonComplete({ steps, onNewLesson }) {
   )
 }
 
-export default function ChatPanel({ lesson, onSend, onStop, onRetry, onNewLesson }) {
-  const { messages, plan, status, document } = lesson
+export default function ChatPanel({ lesson, onDraftChange, onSend, onStop, onRetry, onNewLesson }) {
+  const { messages, status, document } = lesson
+  const plan = useDisplayPlan(lesson)
   const streaming = messages.some((message) => message.status === 'streaming')
   const listRef = useRef(null)
   const stickToBottom = useRef(true)
@@ -81,12 +83,12 @@ export default function ChatPanel({ lesson, onSend, onStop, onRetry, onNewLesson
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100dvh-15rem)] lg:flex-none">
-      <div ref={listRef} onScroll={handleScroll} role="log" className="flex-1 space-y-4 overflow-y-auto p-4">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={listRef} onScroll={handleScroll} role="log" dir={lesson.plan.dir} lang={lesson.plan.language} className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.map((message, index) => (
           <Fragment key={message.id}>
             {message.stepIndex !== messages[index - 1]?.stepIndex && (
-              <StepDivider index={message.stepIndex} title={plan.steps[message.stepIndex].title} />
+              <StepDivider index={message.stepIndex} title={plan.steps[message.stepIndex].title} dir={plan.dir} language={plan.language} />
             )}
             <Message
               message={message}
@@ -96,7 +98,11 @@ export default function ChatPanel({ lesson, onSend, onStop, onRetry, onNewLesson
           </Fragment>
         ))}
 
-        {status === 'finished' && <LessonComplete steps={plan.steps} onNewLesson={onNewLesson} />}
+        {status === 'finished' && (
+          <div dir={plan.dir} lang={plan.language}>
+            <LessonComplete steps={plan.steps} onNewLesson={onNewLesson} />
+          </div>
+        )}
       </div>
 
       {sourceIds && (
@@ -108,7 +114,14 @@ export default function ChatPanel({ lesson, onSend, onStop, onRetry, onNewLesson
       )}
 
       {status !== 'finished' && (
-        <Composer busy={streaming || Boolean(lesson.pendingTurn)} streaming={streaming} onSend={onSend} onStop={onStop} />
+        <Composer
+          text={lesson.draft ?? ''}
+          onChange={onDraftChange}
+          busy={streaming || Boolean(lesson.pendingTurn)}
+          streaming={streaming}
+          onSend={onSend}
+          onStop={onStop}
+        />
       )}
     </div>
   )

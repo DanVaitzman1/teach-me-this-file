@@ -1,12 +1,47 @@
 @import "tailwindcss";
 
-/* "surface" is the color of cards, panels and dialogs: white, or dark in the dark theme. */
+/* A school-friendly palette: paper, sky, mint, peach and sunny yellow.
+   Existing indigo utilities use the brand's deep blue; dark text keeps pastels readable. */
 @theme {
   --color-surface: #ffffff;
+  --color-canvas: #fffaf0;
+  --color-school-sky: #edf5ff;
+  --color-school-mint: #e8f7ee;
+  --color-school-peach: #fff0e7;
+  --color-school-sun: #ffedb3;
+  --color-school-ink: #17324f;
+  --color-action: #1e40af;
+
+  --color-indigo-50: #edf5ff;
+  --color-indigo-100: #dbeafe;
+  --color-indigo-200: #b7d4fc;
+  --color-indigo-300: #8bb7f4;
+  --color-indigo-400: #6098e8;
+  --color-indigo-500: #2563eb;
+  --color-indigo-600: #1d4ed8;
+  --color-indigo-700: #1e40af;
+  --color-indigo-800: #1e3a8a;
+  --color-indigo-900: #17324f;
+
+  --color-emerald-50: #e8f7ee;
+  --color-emerald-100: #cfefdf;
+  --color-emerald-200: #a4dfc5;
+  --color-emerald-500: #16805f;
+  --color-emerald-600: #116c50;
+  --color-emerald-700: #12593f;
+  --color-emerald-800: #164b38;
+  --color-emerald-900: #163f31;
+
+  --color-slate-400: #63748a;
+  --color-slate-500: #566880;
+  --color-slate-600: #41566f;
+  --color-slate-700: #304962;
+  --color-slate-800: #213c57;
+  --color-slate-900: #17324f;
 }
 
 html {
-  background-color: var(--color-slate-50);
+  background-color: var(--color-canvas);
   color-scheme: light;
 }
 
@@ -17,25 +52,32 @@ html {
    strong accent shades (400-600) stay as they are. */
 html.dark {
   color-scheme: dark;
-  --color-surface: #111827;
+  --color-surface: #192d42;
+  --color-canvas: #112438;
+  --color-school-sky: #1b3b5a;
+  --color-school-mint: #1b3d34;
+  --color-school-peach: #49312e;
+  --color-school-sun: #4b3b1c;
+  --color-school-ink: #f7f2e8;
+  --color-action: #b3d2ff;
 
-  --color-slate-50: #0b1120;
-  --color-slate-100: #1e293b;
-  --color-slate-200: #334155;
-  --color-slate-300: #475569;
-  --color-slate-400: #7c8aa0;
-  --color-slate-500: #94a3b8;
-  --color-slate-600: #cbd5e1;
-  --color-slate-700: #e2e8f0;
-  --color-slate-800: #f1f5f9;
-  --color-slate-900: #f8fafc;
+  --color-slate-50: #14283d;
+  --color-slate-100: #243c53;
+  --color-slate-200: #38516a;
+  --color-slate-300: #526b83;
+  --color-slate-400: #9eb5ca;
+  --color-slate-500: #b1c4d6;
+  --color-slate-600: #c9d9e7;
+  --color-slate-700: #dce7f0;
+  --color-slate-800: #eaf1f7;
+  --color-slate-900: #f5f8fc;
 
-  --color-indigo-50: #1e1b4b;
-  --color-indigo-100: #312e81;
-  --color-indigo-200: #3730a3;
-  --color-indigo-700: #a5b4fc;
-  --color-indigo-800: #c7d2fe;
-  --color-indigo-900: #e0e7ff;
+  --color-indigo-50: #1b3552;
+  --color-indigo-100: #23456c;
+  --color-indigo-200: #345b8a;
+  --color-indigo-700: #b3d2ff;
+  --color-indigo-800: #cfe2ff;
+  --color-indigo-900: #e7f0ff;
 
   --color-emerald-50: #052e22;
   --color-emerald-100: #064e3b;
@@ -63,6 +105,14 @@ html.dark {
   --color-sky-700: #7dd3fc;
   --color-violet-100: #2e1065;
   --color-violet-700: #c4b5fd;
+}
+
+/* Soft color at the edges leaves the reading panels calm and uncluttered. */
+.school-background {
+  background-color: var(--color-canvas);
+  background-image:
+    radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--color-school-sun) 65%, transparent), transparent 45%),
+    radial-gradient(ellipse at 95% 15%, var(--color-school-sky), transparent 50%);
 }
 
 /* Formulas are always written left to right, also inside right-to-left text,

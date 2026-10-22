@@ -6,16 +6,16 @@ import { ArrowRightIcon, CheckIcon, SparklesIcon } from '../../components/Icons'
 import FilePicker from './FilePicker'
 import { SAMPLE_DOCUMENT, SAMPLE_TEACHER_PROMPT } from './sampleDocument'
 import { useT } from '../../i18n/context'
+import { MAX_FILE_MB } from '../../../../shared/documentLimits.mjs'
 
-const MAX_FILE_MB = 10
 const MAX_PROMPT_CHARS = 2000
 
 // One click fills the instructions; the teacher can edit them after.
 const EXAMPLE_PROMPTS = [
-  { label: '7th grade · French · Socratic', text: 'Teach this to 7th graders, in French. Be Socratic. Keep it under 15 minutes.' },
-  { label: 'Explain like I’m 10', text: 'Explain it simply, with everyday examples, as if to a curious 10-year-old.' },
-  { label: 'Quiz me', text: 'Mostly ask questions, one at a time, and explain only when the student gets it wrong.' },
-  { label: 'בעברית, לתיכון', text: 'למד את החומר בעברית, לתלמידי תיכון. קצב מהיר, עם תרגיל קצר אחרי כל רעיון.' },
+  { label: '7th grade · French · Socratic', text: 'Teach this to 7th graders, in French. Be Socratic. Keep it under 15 minutes.', color: 'bg-school-sky' },
+  { label: 'Explain like I’m 10', text: 'Explain it simply, with everyday examples, as if to a curious 10-year-old.', color: 'bg-school-mint' },
+  { label: 'Quiz me', text: 'Mostly ask questions, one at a time, and explain only when the student gets it wrong.', color: 'bg-school-peach' },
+  { label: 'בעברית, לתיכון', text: 'למד את החומר בעברית, לתלמידי תיכון. קצב מהיר, עם תרגיל קצר אחרי כל רעיון.', color: 'bg-school-sun' },
 ]
 
 // The number of a form section; a check once that part is filled in.
@@ -24,7 +24,7 @@ function SectionTitle({ number, done, children }) {
     <div className="flex items-center gap-2">
       <span
         className={`grid size-6 place-items-center rounded-full text-xs font-bold transition-colors ${
-          done ? 'bg-emerald-500 text-white' : 'bg-indigo-600 text-white'
+          done ? 'bg-emerald-500 text-white' : number === 1 ? 'bg-school-sun text-school-ink' : 'bg-school-peach text-school-ink'
         }`}
       >
         {done ? <CheckIcon className="size-3.5" /> : number}
@@ -43,6 +43,9 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
   const abortRef = useRef(null)
   const formRef = useRef(null)
   const promptRef = useRef(null)
+
+  // Leaving the upload screen must not later open a lesson from an abandoned read.
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   function chooseFile(nextFile) {
     setError(
@@ -95,7 +98,7 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
   return (
     <div className="space-y-6 py-2 sm:py-6">
       <div className="space-y-2 text-center">
-        <p className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 ring-1 ring-indigo-100">
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-school-mint px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
           <SparklesIcon className="size-3.5" /> {t('heroBadge')}
         </p>
         <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{t('heroTitle')}</h2>
@@ -107,13 +110,14 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
       <form
         ref={formRef}
         onSubmit={handleSubmit}
-        className="space-y-6 rounded-2xl border border-slate-200 bg-surface p-5 shadow-sm sm:p-7"
+        className="space-y-6 rounded-2xl border border-slate-200 border-t-4 border-t-indigo-400 bg-surface p-5 shadow-sm sm:p-7"
       >
         <section className="space-y-3">
           <SectionTitle number={1} done={Boolean(file) && !error}>
             <h3 className="font-semibold text-slate-900">{t('materialTitle')}</h3>
           </SectionTitle>
           <FilePicker file={file} onChange={chooseFile} onClear={clearFile} disabled={uploading} />
+          <p className="text-xs text-slate-500">{t('fileLimits')}</p>
         </section>
 
         <section className="space-y-3">
@@ -154,7 +158,7 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
                 className={`rounded-full px-3 py-1 text-xs font-medium ring-1 transition-colors ${
                   teacherPrompt === example.text
                     ? 'bg-indigo-600 text-white ring-indigo-600'
-                    : 'bg-surface text-slate-600 ring-slate-200 hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-200'
+                    : `${example.color} text-slate-700 ring-slate-200 hover:text-indigo-700 hover:ring-indigo-300`
                 }`}
               >
                 {example.label}

@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef } from 'react'
-import { createPlan, streamTurn } from '../api/lessons'
+import { createPlan, streamTurn, translateLabels } from '../api/lessons'
 import { initialLibrary, libraryReducer } from './libraryReducer'
 import { buildTurnRequest } from './turnRequest'
 
@@ -19,7 +19,10 @@ function loadLibrary() {
         const messages = lesson.messages.map((message) =>
           message.status === 'streaming' ? { ...message, status: 'stopped' } : message,
         )
-        return [id, { ...lesson, messages }]
+        const labelTranslations = Object.fromEntries(
+          Object.entries(lesson.labelTranslations ?? {}).filter(([, translation]) => translation.status === 'ready'),
+        )
+        return [id, { draft: '', hasUnreadReply: false, ...lesson, messages, labelTranslations }]
       }),
     )
     return { lessons, order, activeId: order.includes(saved.activeId) ? saved.activeId : null }
@@ -30,27 +33,60 @@ function loadLibrary() {
 
 const isStreaming = (lesson) => lesson.messages.some((message) => message.status === 'streaming')
 
+function saveLibrary(library) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(library))
+    return true
+  } catch {
+    // Avoid restoring an obsolete conversation after a failed write.
+    try { sessionStorage.removeItem(STORAGE_KEY) } catch { /* Storage may be blocked. */ }
+    return false
+  }
+}
+
 // All lessons and their requests. Requests keep running for lessons that are
 // not on screen, so the student can switch away while a plan is prepared or
 // the tutor is writing.
-export function useLessons(apiKey) {
+export function useLessons(apiKey, language) {
   const [library, dispatch] = useReducer(libraryReducer, undefined, loadLibrary)
   // lesson id → AbortController of its running plan or tutor request.
   const requests = useRef(new Map())
+  const labelRequests = useRef(new Map())
+  const latestLibrary = useRef(library)
+  const saveTimer = useRef(null)
 
   const dispatchTo = (id, action) => dispatch({ type: 'lesson_action', id, action })
+  function persist(value) {
+    const full = !saveLibrary(value)
+    if (Boolean(value.storageFull) !== full) dispatch({ type: 'storage_changed', full })
+  }
 
-  // Saved after each change, except while a message streams (that would write
-  // every lesson for every few words).
+  // Throttle writes during streaming, so drafts in other lessons still get saved.
+  // Save immediately once all streams settle, and before a reload leaves the page.
   useEffect(() => {
+    latestLibrary.current = library
     const lessons = Object.values(library.lessons)
-    if (lessons.some(isStreaming)) return
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(library))
-    } catch {
-      // Storage full or blocked: the lessons still work until the tab is reloaded.
+    if (!lessons.some(isStreaming)) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
+      persist(library)
+    } else if (!saveTimer.current) {
+      saveTimer.current = setTimeout(() => {
+        persist(latestLibrary.current)
+        saveTimer.current = null
+      }, 500)
     }
   }, [library])
+
+  useEffect(() => {
+    const saveOnLeave = () => persist(latestLibrary.current)
+    window.addEventListener('pagehide', saveOnLeave)
+    return () => {
+      window.removeEventListener('pagehide', saveOnLeave)
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
+    }
+  }, [])
 
   async function runTurn(lessonId, lesson, kind) {
     const controller = new AbortController()
@@ -89,6 +125,39 @@ export function useLessons(apiKey) {
     }
   })
 
+  async function runLabelTranslation(lessonId, plan) {
+    const key = `${lessonId}:${language}`
+    const controller = new AbortController()
+    labelRequests.current.set(key, { lessonId, controller })
+    dispatchTo(lessonId, { type: 'labels_translation_started', language })
+    try {
+      const labels = await translateLabels({
+        language,
+        labels: {
+          title: plan.title,
+          audience: plan.audience,
+          steps: plan.steps.map(({ id, title, objective }) => ({ id, title, objective })),
+        },
+      }, { apiKey, signal: controller.signal })
+      labelRequests.current.delete(key)
+      dispatchTo(lessonId, { type: 'labels_translation_ready', language, labels })
+    } catch (err) {
+      labelRequests.current.delete(key)
+      dispatchTo(lessonId, { type: 'labels_translation_failed', language, error: { code: err.code, message: err.message } })
+    }
+  }
+
+  // Cache by lesson and language. Two requests at most, independent of tutor streams.
+  // A late result is cached under its requested language, never the newly selected one.
+  useEffect(() => {
+    for (const id of library.order) {
+      const lesson = library.lessons[id]
+      if (labelRequests.current.size >= 2) break
+      if (lesson.plan && lesson.plan.language !== language && !lesson.labelTranslations?.[language] &&
+          !labelRequests.current.has(`${id}:${language}`)) runLabelTranslation(id, lesson.plan)
+    }
+  })
+
   async function runPlan(lessonId, document, teacherPrompt) {
     const controller = new AbortController()
     requests.current.set(lessonId, controller)
@@ -118,19 +187,28 @@ export function useLessons(apiKey) {
   }
 
   return {
+    storageFull: Boolean(library.storageFull),
     lessons: library.order.map((id) => ({ id, ...library.lessons[id] })),
     activeLesson: library.activeId && { id: library.activeId, ...library.lessons[library.activeId] },
     start,
     retryPlan,
+    retryLabels: (id) => dispatchTo(id, { type: 'labels_translation_retried', language }),
     open: (id) => dispatch({ type: 'lesson_opened', id }),
     newLesson: () => dispatch({ type: 'lesson_opened', id: null }),
     sendMessage: (id, text) => dispatchTo(id, { type: 'student_message_sent', id: crypto.randomUUID(), text }),
+    setDraft: (id, text) => dispatchTo(id, { type: 'draft_changed', text }),
     stop: (id) => requests.current.get(id)?.abort(),
     retryTurn: (id, messageId) => dispatchTo(id, { type: 'tutor_turn_retried', id: messageId }),
     // Also cancels the lesson's plan or tutor request if one is running.
     remove: (id) => {
       requests.current.get(id)?.abort()
       requests.current.delete(id)
+      for (const [key, request] of labelRequests.current) {
+        if (request.lessonId === id) {
+          request.controller.abort()
+          labelRequests.current.delete(key)
+        }
+      }
       dispatch({ type: 'lesson_deleted', id })
     },
   }

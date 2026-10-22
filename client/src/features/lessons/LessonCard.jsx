@@ -1,6 +1,7 @@
 import { CheckIcon, CloseIcon, DocumentIcon } from '../../components/Icons'
 import RichText from '../../components/RichText'
 import { useT } from '../../i18n/context'
+import { useDisplayPlan } from '../../lesson/useDisplayPlan'
 
 // Where a lesson stands, as a short label and a state for the icon.
 function summarize(lesson, t) {
@@ -15,7 +16,7 @@ function summarize(lesson, t) {
 }
 
 const ICON_STYLES = {
-  busy: 'bg-indigo-100 text-indigo-600',
+  busy: 'bg-indigo-100 text-action',
   error: 'bg-red-100 text-red-600',
   done: 'bg-emerald-100 text-emerald-700',
   active: 'bg-indigo-600 text-white',
@@ -24,6 +25,7 @@ const ICON_STYLES = {
 // One lesson in a list: title (or file name before there is a plan), status, open and delete.
 export default function LessonCard({ lesson, active, onOpen, onDelete }) {
   const t = useT()
+  const plan = useDisplayPlan(lesson)
   const { state, label } = summarize(lesson, t)
   const progress = lesson.plan ? (lesson.status === 'finished' ? 1 : lesson.currentStepIndex / lesson.plan.steps.length) : 0
 
@@ -44,8 +46,13 @@ export default function LessonCard({ lesson, active, onOpen, onDelete }) {
       </span>
 
       <button onClick={onOpen} className="min-w-0 flex-1 text-start after:absolute after:inset-0" aria-current={active || undefined}>
-        <span dir={lesson.plan?.dir ?? 'auto'} className="block truncate font-medium text-slate-900">
-          {lesson.plan ? <RichText inline>{lesson.plan.title}</RichText> : lesson.document.fileName}
+        <span className="flex min-w-0 items-center gap-2">
+          <span dir={plan?.dir ?? 'auto'} lang={plan?.language} className="min-w-0 flex-1 truncate font-medium text-slate-900">
+            {plan ? <RichText inline>{plan.title}</RichText> : lesson.document.fileName}
+          </span>
+          {lesson.hasUnreadReply && (
+            <span role="status" aria-label={t('newReply')} title={t('newReply')} className="size-2 shrink-0 rounded-full bg-emerald-500" />
+          )}
         </span>
         <span className="flex items-center gap-2 text-xs text-slate-500">
           <span>{label}</span>

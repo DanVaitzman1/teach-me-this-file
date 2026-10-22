@@ -7,12 +7,13 @@ import { LANGUAGES } from '../../i18n/strings'
 // A row of options where exactly one is chosen (theme, language). Applies at once.
 function SegmentedControl({ label, options, value, onChange }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col gap-1 rounded-xl bg-slate-100 p-1">
+    <div role="radiogroup" aria-label={label} className={`grid gap-1 rounded-xl bg-slate-100 p-1 ${options.length > 3 ? 'grid-cols-2 sm:grid-cols-3' : 'auto-cols-fr grid-flow-col'}`}>
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           role="radio"
+          dir="auto"
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${

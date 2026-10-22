@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { SendIcon, StopIcon } from '../../components/Icons'
 import { useT } from '../../i18n/context'
 
@@ -9,23 +9,20 @@ const MAX_HEIGHT_PX = 160
 
 // The student's input. While the tutor is writing, the student can keep typing
 // but not send; the Send button becomes Stop.
-export default function Composer({ busy, streaming, onSend, onStop }) {
+export default function Composer({ text, onChange, busy, streaming, onSend, onStop }) {
   const t = useT()
-  const [text, setText] = useState('')
   const textareaRef = useRef(null)
   const canSend = text.trim() && !busy
 
-  function resize() {
+  useLayoutEffect(() => {
     const textarea = textareaRef.current
     textarea.style.height = 'auto'
     textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_HEIGHT_PX)}px`
-  }
+  }, [text])
 
   function send() {
     if (!canSend) return
     onSend(text.trim())
-    setText('')
-    requestAnimationFrame(resize)
   }
 
   function handleKeyDown(event) {
@@ -42,7 +39,7 @@ export default function Composer({ busy, streaming, onSend, onStop }) {
         event.preventDefault()
         send()
       }}
-      className="border-t border-slate-100 bg-surface p-3"
+      className="shrink-0 border-t border-slate-100 bg-surface p-3"
     >
       <div className="flex items-end gap-2 rounded-2xl border border-slate-300 bg-surface p-1.5 ps-3 transition-shadow focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200">
         <label htmlFor="student-message" className="sr-only">
@@ -55,10 +52,7 @@ export default function Composer({ busy, streaming, onSend, onStop }) {
           rows={1}
           value={text}
           maxLength={MAX_ANSWER_CHARS}
-          onChange={(event) => {
-            setText(event.target.value)
-            resize()
-          }}
+          onChange={(event) => onChange(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t('answerPlaceholder')}
           className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm focus:outline-none"

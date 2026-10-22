@@ -12,6 +12,17 @@ export async function createPlan({ passages, teacherPrompt }, { apiKey, signal }
   return res.json()
 }
 
+export async function translateLabels({ labels, language }, { apiKey, signal }) {
+  const res = await apiFetch('/lessons/labels', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ labels, language }),
+    apiKey,
+    signal,
+  })
+  return res.json()
+}
+
 // Streams one tutor message. Calls onDelta(text) for each piece as it arrives
 // and resolves with the final { stepComplete, sourceIds }.
 // Rejects with AbortError when the signal aborts (the Stop button).

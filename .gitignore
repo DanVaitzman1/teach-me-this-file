@@ -4,6 +4,8 @@ dist/
 .env.*
 .DS_Store
 *.log
+client/test-results/
+client/playwright-report/
 
 # Local notes for AI coding sessions and work tracking, not part of the project.
 HANDOFF.md

@@ -12,9 +12,9 @@
         const prefs = JSON.parse(localStorage.getItem('preferences')) || {}
         const dark = prefs.theme === 'dark' || (prefs.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
         document.documentElement.classList.toggle('dark', dark)
-        if (prefs.language === 'he') {
-          document.documentElement.lang = 'he'
-          document.documentElement.dir = 'rtl'
+        if (['en', 'he', 'ar', 'fr', 'es'].includes(prefs.language)) {
+          document.documentElement.lang = prefs.language
+          document.documentElement.dir = ['he', 'ar'].includes(prefs.language) ? 'rtl' : 'ltr'
         }
       } catch {}
     </script>

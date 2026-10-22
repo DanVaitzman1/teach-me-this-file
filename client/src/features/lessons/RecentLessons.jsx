@@ -13,7 +13,7 @@ export default function RecentLessons({ lessons, onOpen, onDelete, onShowAll }) 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-700">{t('continueLesson')}</h2>
         {lessons.length > SHOWN && (
-          <button onClick={onShowAll} className="text-sm font-medium text-indigo-600 hover:underline">
+          <button onClick={onShowAll} className="text-sm font-medium text-action hover:underline">
             {t('showAllLessons', { n: lessons.length })}
           </button>
         )}

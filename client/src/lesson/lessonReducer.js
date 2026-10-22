@@ -18,6 +18,9 @@ export const initialLesson = {
   plan: null,
   currentStepIndex: 0,
   messages: [],
+  draft: '',
+  hasUnreadReply: false,
+  labelTranslations: {},
   pendingTurn: null,
   error: null,
 }
@@ -27,9 +30,24 @@ export function lessonReducer(state, action) {
     case 'planning_started':
       return { ...initialLesson, status: 'planning', document: action.document, teacherPrompt: action.teacherPrompt }
     case 'plan_ready':
-      return { ...state, status: 'ready', plan: action.plan, currentStepIndex: 0, error: null, pendingTurn: 'start_step' }
+      return { ...state, status: 'ready', plan: action.plan, labelTranslations: {}, currentStepIndex: 0, error: null, pendingTurn: 'start_step' }
     case 'plan_failed':
       return { ...state, status: 'plan_error', error: action.error }
+
+    case 'draft_changed':
+      return { ...state, draft: action.text }
+
+    case 'labels_translation_started':
+      return { ...state, labelTranslations: { ...state.labelTranslations, [action.language]: { status: 'loading' } } }
+    case 'labels_translation_ready':
+      return { ...state, labelTranslations: { ...state.labelTranslations, [action.language]: { status: 'ready', labels: action.labels } } }
+    case 'labels_translation_failed':
+      return { ...state, labelTranslations: { ...state.labelTranslations, [action.language]: { status: 'error', error: action.error } } }
+    case 'labels_translation_retried': {
+      const labelTranslations = { ...state.labelTranslations }
+      delete labelTranslations[action.language]
+      return { ...state, labelTranslations }
+    }
 
     case 'student_message_sent':
       return {
@@ -39,6 +57,7 @@ export function lessonReducer(state, action) {
           { id: action.id, role: 'student', text: action.text, stepIndex: state.currentStepIndex, status: 'done' },
         ],
         pendingTurn: 'reply',
+        draft: '',
       }
     case 'tutor_turn_started':
       return {

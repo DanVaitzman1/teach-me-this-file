@@ -13,7 +13,7 @@ export default function SourceDialog({ passages, isPdf, onClose }) {
         {passages.map((passage) => (
           <li key={passage.id} className="space-y-1">
             {isPdf && passage.page && <p className="text-xs font-medium text-slate-500">{t('pdfPage', { n: passage.page })}</p>}
-            <div className="rich-text rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+            <div dir="auto" className="rich-text rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
               <RichText>{passage.text}</RichText>
             </div>
           </li>

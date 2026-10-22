@@ -4,7 +4,7 @@ import { useErrorMessage, useT } from '../../i18n/context'
 
 function TutorAvatar() {
   return (
-    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
+    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-emerald-600 text-white shadow-sm">
       <SparklesIcon className="size-4" />
     </span>
   )
@@ -40,7 +40,7 @@ export default function Message({ message, onRetry, onShowSource }) {
       <TutorAvatar />
       <div className="min-w-0 space-y-1.5">
         {(message.text || message.status === 'streaming') && (
-          <div className="rich-text rounded-2xl rounded-ss-md bg-slate-100 px-4 py-2.5 text-slate-800">
+          <div className="rich-text rounded-2xl rounded-ss-md border border-indigo-100 bg-school-sky px-4 py-2.5 text-slate-800">
             {message.text ? <RichText>{message.text}</RichText> : <TypingDots />}
           </div>
         )}

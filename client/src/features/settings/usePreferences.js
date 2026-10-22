@@ -8,7 +8,8 @@ const DEFAULTS = { theme: 'system', language: 'en' }
 
 function readPreferences() {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORAGE_KEY)) }
+    const saved = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORAGE_KEY)) }
+    return { ...saved, language: LANGUAGES[saved.language] ? saved.language : DEFAULTS.language }
   } catch {
     return DEFAULTS
   }

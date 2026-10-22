@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { CloseIcon, UploadIcon } from '../../components/Icons'
 import { useT } from '../../i18n/context'
+import { MAX_FILE_MB } from '../../../../shared/documentLimits.mjs'
 
 const ACCEPTED_EXTENSIONS = '.pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp'
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp']
@@ -83,7 +84,7 @@ export default function FilePicker({ file, onChange, onClear, disabled }) {
             type="button"
             onClick={() => inputRef.current.click()}
             disabled={disabled}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-100 disabled:opacity-50"
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-action hover:bg-indigo-100 disabled:opacity-50"
           >
             {t('change')}
           </button>
@@ -105,12 +106,12 @@ export default function FilePicker({ file, onChange, onClear, disabled }) {
           className={`group flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-all ${
             dragging
               ? 'scale-[1.01] border-indigo-500 bg-indigo-50'
-              : 'border-slate-300 bg-slate-50/50 hover:border-indigo-400 hover:bg-indigo-50/40'
+              : 'border-indigo-200 bg-school-sky hover:border-indigo-400 hover:bg-indigo-100/50'
           }`}
         >
           <span
             className={`grid size-12 place-items-center rounded-full transition-colors ${
-              dragging ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'
+              dragging ? 'bg-indigo-600 text-white' : 'bg-school-sun text-school-ink group-hover:bg-indigo-600 group-hover:text-white'
             }`}
           >
             <UploadIcon />
@@ -119,7 +120,7 @@ export default function FilePicker({ file, onChange, onClear, disabled }) {
             <span className="block font-medium text-slate-900">
               {dragging ? t('dropItHere') : (
                 <>
-                  {t('dropFileOr')} <span className="text-indigo-600 underline-offset-2 group-hover:underline">{t('browse')}</span>
+                  {t('dropFileOr')} <span className="text-action underline-offset-2 group-hover:underline">{t('browse')}</span>
                 </>
               )}
             </span>
@@ -131,7 +132,7 @@ export default function FilePicker({ file, onChange, onClear, disabled }) {
                 {type}
               </span>
             ))}
-            <span className="px-1 py-0.5 text-xs text-slate-400">{t('upTo10MB')}</span>
+            <span className="px-1 py-0.5 text-xs text-slate-400">{t('upToMB', { n: MAX_FILE_MB })}</span>
           </span>
         </button>
       )}
