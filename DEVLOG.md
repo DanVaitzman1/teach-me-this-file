@@ -1491,3 +1491,447 @@ removed it. `eslint` passes, production build OK.
 Added `AGENTS.md` (read automatically by Codex and similar agents) with the project context, working rules,
 architecture map, decisions, known weaknesses and remaining work, so another coding agent can continue from
 here. Kept **out of git** like `HANDOFF.md`; `.gitignore` now also lists `AGENTS.md` and `CHECKLIST.md`.
+
+---
+
+## 2026-10-22 — Playwright mobile checks
+
+Dan requested Playwright checks, then clarified that he wanted to watch the browser run.
+
+- Installed `@playwright/test` in `/private/tmp/teach-me-playwright`, keeping project dependencies unchanged.
+  The temporary runner is `mobile-check.cjs` there; screenshots and JSON reports are in its `results/` folder.
+- Tested the local app at `http://localhost:5173` with an isolated Chrome 155 profile: touch/mobile
+  contexts at 375 × 812 and 412 × 915, plus desktop at 1440 × 1000. Each size used English/light and
+  Hebrew/dark, for six configurations and two grouped scenarios per configuration.
+- **Verified: 12/12 grouped scenarios passed.** Settings and dummy-key entry, required upload inputs,
+  example prompt selection, a real TXT upload through Express, rendered chat math, horizontal overflow,
+  the answer box within the viewport (including opening the two-step outline), source math/table dialog,
+  a simulated AI_BUSY error and retry, automatic step transition, lesson completion, and reload persistence
+  of lessons and preferences. No uncaught page errors were observed in these flows.
+- The first run had four false failures: its formula selector found the step objective, intentionally
+  hidden on small screens. Scoped the assertion to the visible chat; all scenarios then passed.
+- After Dan's clarification, launched the Hebrew/dark 375 px scenario in visible Chrome with slower
+  actions and pauses so he could watch the upload, chat, sources, error recovery and completion.
+  Both grouped scenarios also passed in that visible run.
+
+**Limits:** health and TXT extraction used the real local server with a dummy key. Plan and tutor HTTP/SSE
+responses were mocked in Playwright; no Gemini quota was used and model quality was not checked. This was
+Chrome device emulation, not a physical phone, Safari/WebKit, a real mobile keyboard, or a production run.
+Stop, background lesson switching and long eight-step outlines were not covered by this run. No application
+code changed; no commit or push was made. Lint/build were not rerun for this documentation-only change.
+
+---
+
+## 2026-10-22 — Verify lesson isolation during fast switching
+
+Dan asked whether answering in one lesson and immediately opening another could mix up messages.
+
+- Reviewed `useLessons.js`, `libraryReducer.js`, `turnRequest.js`, `App.jsx` and the server turn path.
+  Each running turn captures its lesson id; deltas and completion actions are routed by that id,
+  independently of `activeId`. Each lesson has its own messages, request body and AbortController.
+- Ran `/private/tmp/teach-me-playwright/lesson-isolation.cjs` in visible Chrome at 375 × 812,
+  Hebrew/dark. Seeded two distinct lessons with deliberately identical passage ids (`p1`) and
+  different document text, teacher prompts and student answers.
+- A temporary local HTTP proxy forwarded the app to Vite and emitted controlled, real chunked SSE
+  responses for tutor calls. Both replies stayed open concurrently; chunks were interleaved, and B
+  finished before A. This exercised the browser's actual fetch/SSE reader without Gemini calls.
+- **All five checks passed:** B showed no A messages; A advanced to step 2 while B stayed at step 1;
+  stopping B left A running; all five outgoing turn bodies and the saved histories contained only
+  their own lesson's data; isolation remained intact after reload once the turns had settled.
+  No uncaught browser errors were observed. Report: temporary `results/lesson-isolation.json`.
+
+No message-routing bug was reproduced and no application code changed. This checks controlled
+concurrency in local Chrome; it does not test Gemini answer quality or every possible event ordering.
+Updated this log only; no commit/push, and no lint/build rerun for documentation.
+
+---
+
+## 2026-10-22 — Lesson sidebar, drafts, unread replies and more useful questions
+
+Dan approved removing the duplicate "New lesson" button and all four suggested improvements, and asked
+to move the app name/settings area to the right so lessons are easier to find.
+
+### Navigation and layout
+
+- **`features/lessons/LessonNavigation.jsx`** (new) and **`App.jsx`**: desktop navigation is a fixed
+  18-rem sidebar on the physical right, in either interface language. It contains the brand, New lesson,
+  a scrollable lesson list, and Settings/API-key status at the bottom. Phones retain a compact header
+  with a lesson-menu button, including when the library is empty. No new dependency was added.
+- **`features/lessons/LessonList.jsx`** (new), **`LessonsDialog.jsx`**: share list rendering and delete
+  confirmation between the sidebar and phone menu. Recent lessons on the upload screen are now shown
+  only below desktop widths, where the persistent sidebar already provides those shortcuts.
+- **`features/lesson/LessonScreen.jsx`**, **`LessonProgress.jsx`**, **`chat/ChatPanel.jsx`**: removed
+  New lesson from the lesson header; retained the contextual action on completion. The app shell owns
+  the available viewport height and the chat flexes within it. The compact progress row opens a
+  scrollable outline over the chat; even eight steps do not push the composer off screen. The full
+  outline is beside the chat from 1280 px; 1024 px still leaves room for the new lesson sidebar.
+
+### Independent lesson state
+
+- **`lesson/lessonReducer.js`**, **`lesson/libraryReducer.js`**: each lesson owns `draft` and
+  `hasUnreadReply`. Sending clears only that draft. A tutor turn finishing in a background lesson marks
+  it unread; opening it clears only its marker. Streaming chunks alone do not announce completion.
+- **`lesson/useLessons.js`**: exposes `setDraft`, supplies defaults for older saved lessons, and saves
+  streaming snapshots at most every 500 ms while changes continue (plus on pagehide). Previously any
+  stream suppressed all storage writes, including drafts in other lessons. Settled state saves at once.
+- **`chat/Composer.jsx`**, **`ChatPanel.jsx`**, **`App.jsx`**: the composer is controlled by its lesson's
+  draft; a layout effect restores textarea height for multiline drafts when switching lessons.
+- **`LessonCard.jsx`**, **`LessonNavigation.jsx`**, **`i18n/strings.js`**: a labelled green dot identifies
+  new replies; phones also show an aggregate marker on the menu button. Added English/Hebrew labels.
+
+### Teaching prompts
+
+- **`server/src/ai/plan.js`**: prefer application, choosing a next action, or distinguishing cases over
+  copying a fact, using only the cited passages.
+- **`server/src/ai/tutor.js`**: decide the question before writing the explanation; avoid disclosing its
+  answer in this or the preceding tutor message. Added the pancake counterexample and explicit guidance
+  for unclear/random answers: ask for a clearer attempt rather than restating the entire solution.
+  Math exercises and procedural situations must remain supported by the current source passages.
+  This is prompt guidance, not a deterministic semantic guarantee; streaming and the META guard remain.
+
+### Verification
+
+- **`lesson/libraryReducer.test.js`** (new), **`client/package.json`**: `cd client && npm test` runs
+  seven Node tests covering draft isolation, send/clear, unread timing/clearing, active replies,
+  background step advancement and late events after deletion. All seven pass.
+- `cd client && npx eslint .` clean; `npx vite build` passes (existing large-bundle warning remains).
+  Both changed server files pass `node --check`; `git diff --check` clean.
+- Visible Playwright checks (`/private/tmp/teach-me-playwright/navigation-check.cjs`) passed all six
+  configurations: desktop 1440 × 1000 English/light and Hebrew/dark; mobile 375 × 812 in both;
+  1024 × 768 Hebrew/light; and short mobile 375 × 667 Hebrew/dark. Verified physical sidebar position,
+  no duplicate header action, independent multiline drafts and restored heights, reload persistence,
+  drafts saved while another lesson streams, unread marker arrival/clearing, independent progress,
+  an eight-step overlay without moving the composer, source tables, Settings, and no page overflow/errors.
+  Inspected desktop/mobile/expanded-outline screenshots.
+- The previous upload/chat regression runner also passed 12/12 grouped scenarios in visible Chrome:
+  actual TXT ingestion, settings, source math/tables, simulated error/retry, completion and reload.
+  These browser runs used controlled tutor SSE responses and dummy credentials.
+
+Dan then supplied a test credential for a focused real-model run; results and the follow-up prompt
+refinement are recorded below. No real-phone or Safari check, commit or deployment was performed here.
+
+---
+
+## 2026-10-23 — Real-model teaching checks and removal of trivial plan steps
+
+Used Dan's supplied test credential for two focused scenarios through the actual local API and visible
+Chrome. Passed it through stdin with terminal echo disabled, then into the isolated browser session;
+no credential value was added to project files, test scripts, reports or screenshots. Closed the test
+browser afterwards. A quiet credential-pattern scan of client/server source and this log found no key.
+
+### First real run
+
+- Uploaded `test-files/recipe-pancakes.txt`, generated a real Hebrew plan, and opened its frying step.
+  The tutor asked when to flip without revealing the bubbles cue. A random-text student answer got a
+  request for a clearer attempt, without restating that cue or completing the step.
+- Uploaded a short English powers document with one worked example and three unsolved exercises.
+  The real plan included a weak "Introduction to the Exercise" step whose check question already
+  displayed the expression it asked the student to identify. The tutor followed that trivial check.
+  It did not disclose the numerical answer, but this was still not a useful understanding check.
+
+### Follow-up changes and real retest
+
+- **`server/src/ai/plan.js`**: allow 1–8 substantive steps, using one or two for a short single-concept
+  document; explicitly exclude greetings, introducing an exercise and reading a question as separate
+  steps. Checks must request a missing result, decision or explanation, with a bad/good math example.
+  The existing schema already allowed one step, so no response/state format changed.
+- **`server/src/ai/tutor.js`**: label the plan question as a suggestion and replace it if it reveals its
+  answer or merely asks for copying. Begin with a substantive task instead of an orientation question.
+- Repeated both scenarios with real plans and real streaming tutor replies. Recipe: two steps; the
+  frying question withheld its answer, and random text got a clarification request. Math: one step
+  about the multiplication rule; after `4^10` the tutor explained that exponents are added rather than
+  multiplied and asked the student to add 5 and 2, without revealing 7 or completing the step.
+- All plan and tutor requests in both runs succeeded. Reviewed the actual dialogues. The temporary
+  runner and final report are `/private/tmp/teach-me-playwright/real-teaching-check.cjs` and its
+  `results/real-teaching/report.json`; reports contain only lesson content and responses.
+- Both changed server files pass `node --check`; `git diff --check` remains clean. The earlier seven
+  state tests, six navigation configurations and 12 regression scenarios had already passed; the
+  final changes here affect only the two server prompts.
+
+**Scope/limits:** these are focused checks, not full lessons. The recipe browser started at the frying
+step of its real generated plan to reproduce the reported problem. Prompt guidance remains probabilistic;
+two successful examples do not guarantee every future question is pedagogically strong. No additional
+AI call, buffering pass or semantic validator was added, so the existing streaming path remains intact.
+
+---
+
+## 2026-10-23 — Five interface languages, translated lesson labels and left sidebar
+
+Dan requested Arabic, French and Spanish alongside English/Hebrew, lesson/step names that change with
+the selected interface language, and navigation on the physical left side of the screen.
+
+### Interface and layout
+
+- **`i18n/strings.js`**, new **`i18n/locales/ar.js`**, **`fr.js`**, **`es.js`**: all interface strings,
+  error messages and replacement parameters are covered in all five languages. Arabic and Hebrew are
+  RTL; French, Spanish and English are LTR. Example teacher prompts remain examples in their own languages.
+- **`features/settings/SettingsDialog.jsx`**: five language choices wrap into a two/three-column radio
+  grid rather than squeezing into one row; each language name uses its own text direction. The help text
+  now explains that interface/lesson labels change while conversation language follows the teacher.
+- **`features/settings/usePreferences.js`**, **`index.html`**: validate saved language choices and apply
+  the correct language/direction before React loads, including Arabic, to avoid a direction flash.
+- **`features/lessons/LessonNavigation.jsx`**, **`App.jsx`**: sidebar is physically left in every language;
+  content has matching left padding. Mobile navigation remains a compact header/menu.
+
+### Translate labels without rebuilding a lesson
+
+- New **`server/src/ai/translateLabels.js`**, **`routes/lessons.js`**: `POST /api/lessons/labels` accepts
+  a supported target language plus only the title, audience and step ids/titles/objectives. Uses the
+  existing high-quota tutor model list with normal fallback, abort and key handling. No document or chat
+  history is sent for translation. The server remains stateless and never stores the key or translation.
+  A shared Zod schema validates input/output; missing, duplicate or foreign step ids and malformed output
+  produce `TRANSLATION_INVALID`. Returned steps are restored to their original order.
+- **`api/lessons.js`**, **`lesson/useLessons.js`**: fetch and cache each lesson/language combination in
+  the lesson's session state. At most two translations run concurrently, using a separate controller
+  map from tutor streams. A late result is stored under its requested language. Deleting a lesson aborts
+  its translations. Only ready translations survive reload; interrupted/failed ones can be requested again.
+- **`lesson/lessonReducer.js`**: translation loading/ready/error/retry actions update only the cache;
+  a new plan clears old translations. Messages, drafts, progress, sources and unread markers stay intact.
+- New **`lesson/displayPlan.js`**, **`useDisplayPlan.js`**: select translated display labels by language
+  and step id. The canonical plan, including its teaching language and check questions, is unchanged.
+  Returning to the original language uses that plan directly without an API call.
+- **`LessonScreen.jsx`**, **`LessonCard.jsx`**, **`ChatPanel.jsx`**: localized labels appear in the
+  sidebar/recent lessons, lesson heading, audience, step outline/header/objective, chat step dividers,
+  and completion checklist. Controls follow the interface direction; actual chat keeps the original
+  lesson direction/language. **`SourceDialog.jsx`** uses automatic direction for original source text.
+- New **`features/lesson/LabelTranslationNotice.jsx`**: show a short loading message while the original
+  labels remain visible; a failed translation offers Retry and Settings for key errors without blocking chat.
+
+### Verification
+
+- **`lesson/displayPlan.test.js`** adds tests for step-id mapping, unchanged canonical context, late
+  translations after a language switch, cache/retry/reset, and complete string/placeholder coverage.
+  `cd client && npm test`: **11 tests pass**, including the earlier lesson-isolation/draft tests.
+- New **`server/src/ai/translateLabels.test.js`** and **`server/package.json`** test script:
+  `cd server && npm test`: **6 tests pass**, with Gemini fetch stubbed, checking reordered output and
+  rejection of missing/duplicate/foreign ids and invalid JSON. Real route checks: missing key → 401;
+  unsupported language and duplicate input ids → 400, without making AI requests.
+- Client ESLint clean; Vite build passes (existing large-bundle warning remains); `git diff --check` clean.
+- Visible Playwright (`/private/tmp/teach-me-playwright/languages-check.cjs`): all five languages at
+  1440 × 1000 and 375 × 812 in light and dark, plus a forced late-French/active-Arabic response race.
+  All five grouped runs pass. Verified translated sidebar/step/completion labels, preserved history,
+  drafts/progress/unread state, original chat/source language, a simulated translation error and Retry,
+  no extra requests on cached switching/reload, at most two concurrent translations, no unexpected tutor
+  calls and no page errors/overflow. Inspected Arabic settings/desktop and French/Spanish layouts.
+- Visible **real Gemini** test (`real-labels-check.cjs`) translated an English two-step plan into French,
+  Arabic, Spanish and Hebrew through the app, with the previously authorized test key supplied through
+  stdin with echo disabled. Every output preserved ids and `$2^3$`; the UI showed the returned labels
+  while retaining progress, draft and the original English message. Returning to a cached language and
+  reloading made no extra AI request. Reviewed the translations; the key was not written to artifacts.
+  The first run was interrupted by a screenshot timeout after successful translation assertions; made
+  screenshots optional and reran the complete four-language/caching check successfully.
+
+**Trade-off:** a previously unseen lesson/language pair requires an AI call and can take several seconds;
+cached switches are immediate. Translation quality still depends on the model. This changes display labels,
+not old chat messages or the teacher's requested teaching language. No physical phone/Safari test, commit
+or deployment was performed in this turn.
+
+---
+
+## 2026-10-23 — School-friendly colors and explanation of the upload cap
+
+Dan asked why uploads stop at 10 MB and requested colors better suited to school students.
+
+### Upload limit (review only)
+
+Confirmed the 10 MiB cap is manually set in `server/src/routes/documents.js` and mirrored in the client.
+Multer holds each upload in memory; PDF parsing/copying/chunk buffers and inline base64 AI payloads add
+memory beyond the original file size. The reason for having a byte cap is to limit resource use per
+request. **The exact 10 MB threshold was a conservative choice, not the result of a load benchmark.**
+The separate 40-page AI-transcription cap and 200,000-character content cap address processing time,
+context and AI usage. Increasing the upload limit is possible, but should be checked with large files
+and concurrent requests. This turn explains the existing limit; its value and upload behavior are unchanged.
+
+### Color changes
+
+- **`client/src/index.css`**: warm paper canvas, deep blue primary actions, pale sky/mint/peach/sunny
+  yellow panels, navy reading text and stronger muted text. Existing indigo utilities now share the
+  blue brand palette. Added semantic school accent colors and an `action` text color, which becomes
+  light blue in dark mode while filled buttons stay deep blue with white labels. Dark mode uses softer
+  navy surfaces with muted warm/green accents; reading panels remain solid rather than patterned.
+- **`App.jsx`**: applies the warm canvas with soft color at its edges. **`LessonNavigation.jsx`**:
+  sunny book mark; the existing actions follow the new shared palette.
+- **`features/upload/UploadScreen.jsx`**: sky-blue card edge, yellow/peach section numbers, mint tutor
+  badge and four pastel example chips; selected examples remain deep blue. **`FilePicker.jsx`**:
+  pale-blue drop zone with a yellow upload icon and readable blue browse/change links.
+- **`features/chat/Message.jsx`**: pale-blue tutor bubbles and blue-to-green tutor avatar; students
+  retain strong blue bubbles so the two speakers remain visually distinct.
+- **`features/lesson/LessonScreen.jsx`**, **`LessonProgress.jsx`**: mint outline, sky step heading and
+  blue-to-green progress, with green completion. **`LessonCard.jsx`**, **`LessonsDialog.jsx`**,
+  **`RecentLessons.jsx`** use the separate action foreground for readable links/icons in both themes.
+
+### Verification
+
+- Client ESLint clean; Vite build passes with the existing large-bundle warning; `git diff --check` clean.
+- Visible Playwright runner `/private/tmp/teach-me-playwright/school-theme-check.cjs`: all four
+  configurations pass — desktop 1440 × 1000 English/light and Hebrew/dark, mobile 375 × 812 Hebrew in
+  light and dark. Checked upload/example selection, lesson navigation, math/chat, outline expansion
+  without moving the composer, source tables, five-language Settings and lesson completion. No page
+  errors, horizontal overflow or AI calls were observed; tests used seeded lessons and dummy credentials.
+- Inspected upload, mobile chat and desktop dark screenshots. Found that the original foreground
+  `text-indigo-600` became too dark on the new dark step header; separated link/caption foreground
+  from filled-button color and reran the checks.
+- Measured six representative text/background pairs in the browser: primary/student/send text 6.70:1,
+  completion button 6.39:1, tutor reading text 10.34:1 light / 10.12:1 dark, step caption 7.94:1 light /
+  7.46:1 dark. All measured pairs exceed 4.5:1. This is a targeted contrast check, not a full
+  accessibility audit. Screenshots/report are in temporary `results/school-theme/`.
+
+No upload performance/load benchmark, physical phone or Safari run was performed. No backend behavior,
+lesson state, API key handling or teaching prompts changed; no commit or deployment was performed here.
+
+---
+
+## 2026-10-23 — Complete-document ingestion and unfamiliar-material coverage
+
+Dan asked to cover the assignment's "Build for the unexpected" requirement: languages/RTL, scans,
+formulas, tables, long documents and unexpected content. This turn changes ingestion and adds
+reproducible regressions, rather than treating a successful upload as proof that all material survived.
+
+### Complete reads and resource bounds
+
+- New **`shared/documentLimits.mjs`**: shared 25 MiB upload, 200 PDF pages, 500,000 extracted
+  characters, 1,000 passages, 1,200 characters per passage and 40 passages per tutor step. These are
+  application budgets. Exceeding a document bound is an error with a split-into-chapters recovery path;
+  newly uploaded documents never silently return a prefix. Legacy `truncated` state remains readable.
+- **`server/src/routes/documents.js`**: one ingestion at a time per process, before Multer allocates
+  the file; a second upload receives `DOCUMENT_BUSY` while other API routes remain available. The
+  slot is released after parsing/worker cleanup, and on upload errors/disconnect. Transfer a copy to
+  the parser worker and release Multer's original buffer. Return PDF page/visual-page counts.
+- New **`server/src/app.js`**, updated **`index.js`**: separate Express configuration from listening
+  so HTTP tests exercise the actual app. JSON limit increases from 1 to 6 MiB to fit the accepted
+  Unicode document plus metadata; lesson validation separately enforces the total character bound.
+- New **`ingest/workerHost.js`**, **`extractWorker.js`**, **`ai/workerBridge.js`**;
+  updated **`ai/gemini.js`**: parse in a worker with 128 MiB old-generation and 16 MiB young-generation
+  heap bounds, plus a ten-minute deadline. Resource failures become recoverable `DOCUMENT_COMPLEX`;
+  timeout becomes `READ_TIMEOUT`. Terminate on disconnect and cancel provider calls. Provider calls
+  execute on the API thread through a request/result bridge: **the user's key is not sent to the
+  worker**. No uploaded file/document/key is written to disk. Worker logs retain the request id.
+
+### Preserve the material
+
+- **`ingest/extract.js`**, new **`pdfPage.js`**: short PDFs still receive visual reading. For longer
+  PDFs, inspect each page instead of using average text density. Sparse pages, RTL, image/vector
+  operators, math, positioned columns and raised/lowered runs select visual reading; plain prose
+  keeps its text layer. Release PDF.js page resources and its loading task. Text accepts UTF-8 and
+  BOM-marked UTF-16, with explicit recovery for invalid/binary input. Check supported image signatures.
+- **`ingest/transcribePdf.js`**: remove the first-40-pages cutoff. Lazily copy groups of up to five
+  selected pages with at most two AI calls in flight; map nonconsecutive chunk pages back to original
+  numbers. Retry missing page markers individually. Reject duplicate/out-of-range numbering, abort
+  siblings on failure, wait for cleanup and preserve the original error rather than a sibling's abort.
+- **`ai/transcribe.js`**: reject blocked/truncated responses instead of accepting partial output;
+  ask the model to mark unreadable words/digits `[unclear]`. **`ai/tutor.js`** explicitly forbids
+  guessing those missing values. Diagram descriptions remain material; blank/unreadable-only output
+  is rejected without discarding every square-bracketed figure description.
+- **`ingest/chunk.js`**: replace the 200k-character prefix cutoff with explicit rejection above the
+  new document bounds. Account for repeated table headers in each passage's size; retain unusually
+  wide rows as bounded text rather than producing oversized passages.
+- **`ingest/docxToText.js`**, **`server/package.json` / lock**: explicitly depend on JSZip and xmldom
+  (already transitive dependencies; pin JSZip 3.10.2 because central-directory size inspection uses
+  its compressed-entry metadata). Check expanded ZIP size before inflation. Use a DOM conversion for
+  table/paragraph/entity structure, including nested-cell content. Read embedded PNG/JPEG/WebP images
+  serially in place; propagate failures even though Mammoth normally catches image errors and omits
+  them. Native Word equations/unsupported drawings receive `DOCX_NEEDS_PDF` with an export-as-PDF path.
+- **`ai/plan.js`**, **`routes/lessons.js`**: consider the complete source including final pages;
+  validate the total plan-input text and per-step tutor budget, deduplicate source ids and reject
+  excessive references rather than silently removing them.
+
+### Interface and persistence
+
+- **`features/upload/UploadScreen.jsx`**, **`FilePicker.jsx`**: shared 25 MB display/client check,
+  chapter/page guidance and truthful several-minutes waiting copy. Abort a read on leaving the upload
+  screen so a late result cannot replace a newly selected existing lesson.
+- **`features/lesson/LessonScreen.jsx`**: complete PDF page-count badge; concise source-check guidance
+  for visually read files; retain warnings for old truncated saved documents.
+- **`lesson/useLessons.js`**, **`libraryReducer.js`**, **`App.jsx`**: surface storage-full/blocked
+  failures while lessons keep working in memory. Remove the stale saved snapshot, preserve drafts,
+  and resume saving when storage becomes available.
+- **`i18n/strings.js`**, **`i18n/locales/{ar,fr,es}.js`**: all new size, parsing, encoding, worker,
+  timeout, busy and persistence notices in all five languages. Existing translation-key/placeholder
+  coverage tests remain clean.
+
+### Findings during verification
+
+1. Adding a nested `maxItems: 40` to the provider's plan output grammar made the Lite fallback return
+   HTTP 400. This was introduced while adding the source budget in this turn. Stronger models were
+   already returning quota errors, exposing it immediately. Keep the strict local Zod bound but omit
+   that single constraint from the provider grammar; a real Lite request then succeeded. Added plan
+   regressions for this compatibility issue and for rejecting over-budget output.
+2. A valid 24 MiB PDF containing a huge unused hex-string object drove the original in-process parser
+   to **1,147 MiB peak RSS** in a fresh local process, excluding fixture creation. This motivated worker
+   isolation. The final bounded path returned `422 DOCUMENT_COMPLEX`; health and the following normal
+   upload both returned 200. Measured peak RSS was **437 MiB**, including HTTP client and server in the
+   same process. This is a targeted pathological-input check, not a Render load benchmark or a bound
+   on every native allocation. A reproducible version is now an HTTP regression test.
+3. The first browser reload assertion compared rendered whitespace and incorrectly reported failures
+   despite preserved messages. Compare saved message arrays before/after reload instead; the corrected
+   real-provider matrix passes. An earlier browser run was also interrupted by a Chrome tab/screenshot
+   timeout. The final complete run below is the evidence used for the result.
+
+### Verification
+
+- New **`server/src/ai/plan.test.js`**, **`ingest/{chunk,extract}.test.js`**,
+  **`routes/documents.test.js`**; expanded server test script: **31 tests pass**, including the earlier
+  translation tests. Real parsers and HTTP routes, provider responses stubbed: UTF/RTL, complete
+  71-page PDF, mixed pages, 41 visual pages and missing-marker retry, worker sibling error/cancel,
+  formulas/tables/nested cells, embedded Word images/failure propagation, native equations, ZIP
+  expansion, malformed/empty/oversized inputs, a valid PDF above 10 MB, >1 MiB Unicode JSON, concurrent
+  uploads, disconnect/cancel/recovery, and worker heap failure with a surviving API/next upload.
+- Client **11 tests pass**; **ESLint clean**; **Vite build passes** (existing large KaTeX bundle warning;
+  final JS approximately 743 kB). `git diff --check` clean.
+- New **`client/playwright.config.js`**, **`tests/unexpected.spec.js`**, Playwright dev dependency and
+  **`test:e2e`** script; **`.gitignore`** excludes generated reports. **10 visible Chrome tests pass**:
+  two workflows in each of en/light/1440, he/dark/375, ar/light/375, fr/dark/1440 and es/light/375.
+  Real upload errors recover after replacement; storage-quota failures warn, preserve the in-memory
+  draft and recover through reload; abandoning a pending upload cannot replace the selected lesson.
+  AI is stubbed and credentials are dummy in these reproducible UI tests.
+- **10 real Gemini end-to-end scenarios pass through the final isolated pipeline in visible Chrome**:
+  Arabic TXT/RTL, English DOCX taught in French, transparent recipe scan, raster powers/fractions/table
+  taught in Hebrew, mixed PDF scans on pages 12/24, full 71-page PDF focused on Chapter 399/page 71,
+  injection file, multilingual Arabic/French/Spanish scan, diagram-only food chain, and Word with an
+  embedded scanned worksheet. Checked actual transcription values, grounding to final pages, SSE
+  deltas, original-language source tables, reload preservation, layouts and no page errors. Two wrong
+  answers did not advance the step. The long PDF retains **308,333 passage characters / 283 passages**.
+- Test key supplied only through runtime stdin with terminal echo disabled, then into isolated browser
+  sessions; no HAR/traces/storage/key files. Final report/screenshots: temporary
+  `/private/tmp/teach-me-playwright/results/unexpected-isolated/`. The test matrix documents precisely
+  what passed and does not treat plausible model output as proof of teaching quality.
+- Added **`test-files/`** fixtures: raster math/table + HTML source, mixed 24-page PDF, multilingual
+  scan + HTML, food-chain diagram + HTML, and DOCX containing the raster worksheet. Updated
+  **`test-files/README.md`**, new **`docs/INGESTION.md`**, and local ignored **`CHECKLIST.md`** with
+  bounds, recovery paths, test commands, results and remaining limitations.
+
+**Remaining limits:** OCR and pedagogical quality are probabilistic. Dense/blurred formulas can still
+be wrong; the page classifier is a heuristic. Real Arabic tutoring sometimes repeated a fact or used
+confusing wording, and some tutors still asked a recall question after showing the answer. A short
+lesson selects ideas from the complete document, not every sentence. Native Word equations need PDF
+export. No real-provider 200-page all-scanned book, handwriting/phone-photo, physical phone, Safari,
+production load, commit, push or deployment was performed. All changes remain local.
+
+---
+
+## 2026-10-23 — Refresh project context and publish the accumulated release
+
+Dan explicitly requested updates to AGENTS, DEVLOG and CHECKLIST, followed by committing and deploying
+all accumulated changes from this session.
+
+- **Local ignored `AGENTS.md`**: replaced the stale post-multi-lesson snapshot with the current
+  architecture: left navigation, isolated drafts/unread replies, five interface languages and cached
+  display-label translation, complete bounded ingestion, worker/provider bridge, tests and known gaps.
+  Added the preference for visible browser testing and current Codex commit trailer. The older draw.io
+  upload diagram is identified as historical; `docs/INGESTION.md` is the current ingestion reference.
+- **Local ignored `CHECKLIST.md`**: refreshed the date, Arabic/RTL and multilingual scan evidence,
+  real recipe/injection checks, state/persistence behavior, formula/Word limitations and release checks.
+  Kept physical-phone/Safari, production load, README/DECISIONS and pedagogical-quality gaps explicit.
+- **`DEVLOG.md`**: preserves the per-feature history and records this release authorization and gate.
+  AGENTS, CHECKLIST, HANDOFF, credentials and generated browser artifacts remain outside Git.
+
+Pre-publication verification rerun against the final source: client ESLint clean, Vite build successful
+(existing approximately 743 kB bundle warning), **11 client tests**, **31 server tests**, and **10 visible
+Playwright checks** all pass. Remote `main` matches the starting local commit, so no remote changes
+need rebasing or overwriting. The earlier ten real-Gemini scenarios are not rerun just for documentation;
+their observed results and limitations remain in the preceding entry and `test-files/README.md`.
+
+Publication uses the existing GitHub `main` → Render auto-deploy path. Production checks compare the
+delivered client assets with the new build, exercise health/ingestion recovery, and inspect desktop and
+mobile/RTL/dark behavior. Final deployment observations and the published commit are recorded in the
+local context/checklist and completion message, rather than claiming success before a live check.
