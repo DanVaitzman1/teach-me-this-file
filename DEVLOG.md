@@ -1211,3 +1211,23 @@ path serve the app; favicon loads; `/api/nope` → JSON 404; in a browser the up
 "Add a Gemini API key" banner, and the dev-only sample button is absent (production build).
 
 Every push to `main` now redeploys automatically.
+
+---
+
+## 2026-10-22 — Requirements checklist and architecture diagram
+
+- **`CHECKLIST.md`** — every requirement of `AI-Engineer-Home-Assignment.pdf` (sections 2–6) with a status
+  (✅ done and verified / ⚠️ partial / ❌ not done / ⏳ needs Dan) and notes, plus the remaining work in
+  order. Main gaps: README.md, DECISIONS.md, a real-key run of `test-files/`, a real-phone check, a final
+  code read-through; and the honest note that git started late (one big first commit).
+- **`docs/architecture.drawio`** — open in diagrams.net / draw.io. Three pages:
+  1. *Architecture*: browser (UI / lesson state / API client / sessionStorage), the Render service
+     (middleware, routes, ingest, AI, logger, static hosting, the API-key rule), Gemini with the model list
+     per task, GitHub → Render deploy; arrows labelled with what travels.
+  2. *Lesson flow*: the status machine (idle → planning → ready → finished, plan_error/retry, reset) and one
+     tutor turn (pendingTurn → runTurn → SSE delta/meta → stepComplete? → next step / wait for the student;
+     Stop and error paths; the question guard).
+  3. *Upload pipeline*: file type → TXT/MD, DOCX, image, PDF (AI or text layer) → chunk.js → passages;
+     error codes along the way.
+  Generated from a small script so the layout is exact; checked that every cell's parent and every edge's
+  ends exist, and rendered all three pages with the diagrams.net viewer to fix overlapping arrows.
