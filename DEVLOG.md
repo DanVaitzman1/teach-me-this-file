@@ -1179,3 +1179,15 @@ middleware can buffer the SSE stream).
   lesson plan, streaming tutor`. Real timestamp; the history started late, and DEVLOG.md is the detailed
   record of the steps. From here on, small commits per change.
 - Not pushed yet: `gh` is logged in to the work GitHub account, the repo belongs on the personal one.
+
+---
+
+## 2026-10-22 — Pushed to GitHub
+
+- Dan logged in to his personal GitHub account in `gh` (browser device flow, done by him); `gh` now holds
+  both accounts, with the personal one active.
+- This repo uses `gh` as its git credential helper (`git config --local credential.https://github.com.helper
+  '!gh auth git-credential'`), so pushes go through the active `gh` account instead of a work password
+  saved in the macOS keychain. Global git config unchanged.
+- Created the **public** repo https://github.com/DanVaitzman1/teach-me-this-file and pushed `main`.
+  Commits show author DanVaitzman1 with the personal email.
