@@ -1269,3 +1269,28 @@ Empty state renders; pasting an image file → file card with IMG badge and sect
 prompt filled, textarea focused, section 2 ✓, Start enabled; submit with a held request → uploading panel
 with the animated bar → Cancel returns to the form without an error; 375 px: chips wrap, button full width,
 long file names truncate. `eslint` passes.
+
+---
+
+## 2026-10-22 — Fix: a blank file is "empty", not a lesson about blank pages
+
+**Found by Dan with `test-files/blank-2-pages.pdf` (real key):** instead of "No text was found", the app
+built a one-step lesson in French — "Observation des pages: observe the document and notice it is made of
+blank pages". The transcription model described each blank page in brackets ("[Page blanche]"-style), so
+the old check (`passages.length === 0`) saw text.
+
+(Side note from the same run: the teacher prompt was the French example chip, and the plan, step and tutor
+were all in French — the teacher's language instruction worked.)
+
+**Changes**
+- `server/src/ai/transcribe.js` prompt: "If a page is blank, write nothing after its marker: do not
+  describe it as blank."
+- `server/src/routes/documents.js`: `hasReadableText(passages)` — a file counts as empty unless some
+  passage has a letter or digit **outside** square brackets (Unicode `\p{L}\p{N}`, so any language).
+  Otherwise 422 `EMPTY_DOCUMENT`.
+
+**Trade-off:** an image whose only content is a figure description (no text, labels or numbers) is now
+rejected as empty. Rare for school material; noted as a known weakness.
+
+**Verified** (documents route, Gemini stubbed): bracket-only pages → 422 `EMPTY_DOCUMENT`; empty pages
+→ 422; a page with a figure description *and* text → 200 with passages.

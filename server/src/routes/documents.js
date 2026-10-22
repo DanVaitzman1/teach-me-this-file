@@ -30,6 +30,13 @@ function receiveFile(req, res, next) {
   });
 }
 
+// A blank scan can come back from transcription as only a bracketed
+// description ("[Blank page]", "[Page blanche]"). Without any letter or digit
+// outside brackets there is nothing to teach, whatever the language.
+function hasReadableText(passages) {
+  return passages.some((passage) => /[\p{L}\p{N}]/u.test(passage.text.replace(/\[[^\]]*\]/g, '')));
+}
+
 export const documentsRouter = Router();
 
 // multipart file → { fileName, method, truncated, passages: [{ id, page, text }] }
@@ -48,7 +55,7 @@ documentsRouter.post('/', requireApiKey, receiveFile, abortOnClose, async (req, 
 
   const { passages, truncated: overCharLimit } = toPassages(extracted.pages);
   const truncated = extracted.truncated || overCharLimit;
-  if (passages.length === 0) {
+  if (!hasReadableText(passages)) {
     throw new AppError(422, 'EMPTY_DOCUMENT', 'No text was found in this file.');
   }
 
