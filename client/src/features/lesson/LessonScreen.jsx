@@ -13,10 +13,6 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
   // When the lesson is finished every step counts as done.
   const doneUpTo = finished ? plan.steps.length : currentStepIndex
 
-  function confirmNewLesson() {
-    if (finished || window.confirm(t('confirmNewLesson'))) onNewLesson()
-  }
-
   // The whole lesson takes the plan's direction, so in Hebrew or Arabic the
   // layout mirrors too: outline on the right, progress filling from the right.
   // On phones the lesson is exactly one screen tall (under the app header) and
@@ -45,7 +41,7 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
           </div>
         </div>
         <button
-          onClick={confirmNewLesson}
+          onClick={onNewLesson}
           className="rounded-lg border border-slate-300 bg-surface px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
         >
           {t('newLesson')}

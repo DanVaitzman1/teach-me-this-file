@@ -109,3 +109,12 @@ export function KeyIcon(props) {
     </Icon>
   )
 }
+
+export function StackIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m12 3 9 5-9 5-9-5z" />
+      <path d="m3 13 9 5 9-5" />
+    </Icon>
+  )
+}

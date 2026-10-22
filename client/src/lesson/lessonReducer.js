@@ -1,12 +1,12 @@
-// The lesson lives here, in app state, not in the chat history: the document,
+// One lesson lives here, in app state, not in the chat history: the document,
 // the teacher's instructions, the plan, where the student is in it, and the
-// conversation.
+// conversation. libraryReducer keeps many of these side by side.
 //
 // status: 'idle' → 'planning' → 'ready' → 'finished'
 //                            ↘ 'plan_error' (retry → 'planning')
 //
 // pendingTurn says the tutor should speak next and why: 'start_step' (open the
-// current step) or 'reply' (answer the student). useLesson sees it and runs
+// current step) or 'reply' (answer the student). useLessons sees it and runs
 // the request, so the reducer alone decides when the tutor talks.
 //
 // message: { id, role: 'tutor' | 'student', text, stepIndex, status, kind?, sourceIds?, error? }
@@ -82,8 +82,6 @@ export function lessonReducer(state, action) {
       }
     }
 
-    case 'reset':
-      return initialLesson
     default:
       throw new Error(`Unknown lesson action: ${action.type}`)
   }

@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { BookIcon, GearIcon, KeyIcon } from './components/Icons'
+import { BookIcon, GearIcon, KeyIcon, StackIcon } from './components/Icons'
 import ServerStatus from './components/ServerStatus'
 import LessonScreen from './features/lesson/LessonScreen'
+import LessonsDialog from './features/lessons/LessonsDialog'
+import RecentLessons from './features/lessons/RecentLessons'
 import PlanningScreen from './features/lesson/PlanningScreen'
 import SettingsDialog from './features/settings/SettingsDialog'
 import { useApiKey } from './features/settings/useApiKey'
 import { usePreferences } from './features/settings/usePreferences'
 import UploadScreen from './features/upload/UploadScreen'
 import { LanguageContext, useT } from './i18n/context'
-import { useLesson } from './lesson/useLesson'
+import { useLessons } from './lesson/useLessons'
 import { useServerStatus } from './useServerStatus'
 
 // Holds the display preferences and provides the interface language below.
@@ -26,33 +28,51 @@ function AppContent({ preferences, onPreferenceChange }) {
   const server = useServerStatus()
   const [apiKey, setApiKey] = useApiKey()
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const { lesson, start, retryPlan, sendMessage, stop, retryTurn, reset } = useLesson(apiKey)
+  const [lessonsOpen, setLessonsOpen] = useState(false)
+  const { lessons, activeLesson, start, retryPlan, open, newLesson, sendMessage, stop, retryTurn, remove } =
+    useLessons(apiKey)
 
   const openSettings = () => setSettingsOpen(true)
   const needsApiKey = server.status === 'ready' && !server.hasServerKey && !apiKey
 
+  // No active lesson: the upload screen, with recent lessons to go back to.
   function renderScreen() {
-    switch (lesson.status) {
-      case 'idle':
-        return (
+    if (!activeLesson) {
+      return (
+        <div className="space-y-8">
           <UploadScreen
             apiKey={apiKey}
             onUploaded={({ document, teacherPrompt }) => start(document, teacherPrompt)}
             onOpenSettings={openSettings}
           />
-        )
-      case 'planning':
-      case 'plan_error':
-        return <PlanningScreen lesson={lesson} onRetry={retryPlan} onCancel={reset} onOpenSettings={openSettings} />
-      case 'ready':
-      case 'finished':
-        return (
-          <LessonScreen lesson={lesson} onSend={sendMessage} onStop={stop} onRetry={retryTurn} onNewLesson={reset} />
-        )
+          <RecentLessons lessons={lessons} onOpen={open} onDelete={remove} onShowAll={() => setLessonsOpen(true)} />
+        </div>
+      )
     }
+    const { id } = activeLesson
+    if (activeLesson.status === 'planning' || activeLesson.status === 'plan_error') {
+      return (
+        <PlanningScreen
+          lesson={activeLesson}
+          onRetry={() => retryPlan(id)}
+          onCancel={() => remove(id)}
+          onOpenSettings={openSettings}
+        />
+      )
+    }
+    return (
+      <LessonScreen
+        key={id}
+        lesson={activeLesson}
+        onSend={(text) => sendMessage(id, text)}
+        onStop={() => stop(id)}
+        onRetry={(messageId) => retryTurn(id, messageId)}
+        onNewLesson={newLesson}
+      />
+    )
   }
 
-  const inLesson = lesson.status === 'ready' || lesson.status === 'finished'
+  const inLesson = activeLesson?.status === 'ready' || activeLesson?.status === 'finished'
   const hasKey = Boolean(apiKey) || server.hasServerKey
 
   return (
@@ -65,19 +85,35 @@ function AppContent({ preferences, onPreferenceChange }) {
             </span>
             <h1 className="font-bold tracking-tight text-slate-900">Teach Me This File</h1>
           </div>
-          <button
-            onClick={openSettings}
-            className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
-          >
-            {server.status === 'ready' && (
-              <span
-                className={`size-2 rounded-full ${hasKey ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                title={hasKey ? t('keySet') : t('noKeyYet')}
-              />
+          <div className="flex items-center gap-1">
+            {lessons.length > 0 && (
+              <button
+                onClick={() => setLessonsOpen(true)}
+                aria-label={t('lessons')}
+                className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              >
+                <StackIcon className="size-4" />
+                <span className="hidden sm:inline">{t('lessons')}</span>
+                <span className="grid min-w-5 place-items-center rounded-full bg-indigo-600 px-1.5 text-xs font-semibold text-white">
+                  {lessons.length}
+                </span>
+              </button>
             )}
-            <GearIcon className="size-4" />
-            {t('settings')}
-          </button>
+            <button
+              onClick={openSettings}
+              aria-label={t('settings')}
+              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            >
+              {server.status === 'ready' && (
+                <span
+                  className={`size-2 rounded-full ${hasKey ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  title={hasKey ? t('keySet') : t('noKeyYet')}
+                />
+              )}
+              <GearIcon className="size-4" />
+              <span className="hidden sm:inline">{t('settings')}</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -103,6 +139,17 @@ function AppContent({ preferences, onPreferenceChange }) {
 
         {server.status === 'ready' && renderScreen()}
       </main>
+
+      {lessonsOpen && (
+        <LessonsDialog
+          lessons={lessons}
+          activeId={activeLesson?.id}
+          onOpen={open}
+          onNew={newLesson}
+          onDelete={remove}
+          onClose={() => setLessonsOpen(false)}
+        />
+      )}
 
       {settingsOpen && (
         <SettingsDialog

@@ -1437,3 +1437,49 @@ Dark + Hebrew: header, banner, Settings dialog, upload screen, lesson with bulle
 complete", translated `AI_BUSY` error with "לנסות שוב", source dialog with a table. Light + English after
 switching back. Preferences persist across reloads; `<html>` gets `dark`, `dir="rtl"`, `lang="he"`.
 `eslint` passes, production build OK.
+
+---
+
+## 2026-10-22 — Several lessons side by side, with easy switching
+
+### State
+
+- **`lesson/libraryReducer.js`** (new): `{ lessons: { id → lesson }, order, activeId }`. Each lesson is a
+  normal `lessonReducer` state; `lesson_action { id, action }` routes a single-lesson action to its lesson
+  (and is ignored if that lesson was deleted meanwhile, e.g. a late stream event). Other actions:
+  `lesson_created` (new id at the front, becomes active), `lesson_opened` (`id` or `null` for the upload
+  screen; moves the lesson to the front), `lesson_deleted`. At most **8 lessons** are kept — each holds its
+  whole document and they share the browser's storage quota — so the oldest is dropped beyond that.
+- **`lessonReducer.js`**: the `reset` action is gone ("new lesson" no longer destroys the current one;
+  deleting is a library action).
+- **`lesson/useLessons.js`** (renamed from `useLesson.js`): one `AbortController` per lesson in a `Map`.
+  The effect that runs `pendingTurn` now loops over **all** lessons, so plans and tutor answers keep going
+  for lessons that are not on screen — the student can switch away while the tutor is writing and come
+  back to the finished message. `stop(id)`, `remove(id)` (also aborts that lesson's request),
+  `retryPlan(id)`, `open(id)`, `newLesson()`. Saved as one `lessons` entry in sessionStorage (ready and
+  finished lessons; planning ones are dropped on reload, streaming messages become "stopped").
+
+### UI
+
+- **Header**: a **Lessons** button with a count badge (shown once there is a lesson); on phones both header
+  buttons are icon-only, with `aria-label`s.
+- **`features/lessons/LessonsDialog.jsx`**: "Your lessons" — "+ New lesson" and every lesson as a card;
+  click to switch, ✕ to delete (with a confirm). A note that lessons live in this tab until it's closed.
+- **`features/lessons/LessonCard.jsx`**: icon by state (spinner while preparing or while the tutor is
+  writing, ✓ when finished, red on a failed plan), the plan title in its own direction (or the file name
+  before there is a plan), "Step 2 of 5" / "Preparing…" / "Done", and a mini progress bar.
+- **`features/lessons/RecentLessons.jsx`**: under the upload form, "Continue a lesson" with the 3 most
+  recent lessons and "All lessons (n)".
+- **"New lesson"** in the lesson screen now just opens the upload screen — no confirm, nothing is lost.
+- Cancel on the planning screen deletes that (unfinished) lesson.
+- `LessonScreen` is keyed by lesson id, so switching lessons resets its local UI state (scroll, open
+  source dialog).
+- New strings in English and Hebrew; `confirmNewLesson` removed.
+
+### Verified (browser, stubbed AI)
+
+Lesson A (English, slow stream) → New lesson → lesson B (Hebrew); the dialog listed B "Step 1 of 2" and
+A "Tutor is writing…" with a spinner; opening A showed its full answer, streamed in the background; B kept
+its own messages and RTL. Reload → both lessons back, A active. Upload screen showed "Continue a lesson";
+deleting a lesson updated the list, the badge and storage. Cancelling a lesson while it was being planned
+removed it. `eslint` passes, production build OK.
