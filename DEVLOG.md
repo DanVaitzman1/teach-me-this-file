@@ -1231,3 +1231,41 @@ Every push to `main` now redeploys automatically.
      error codes along the way.
   Generated from a small script so the layout is exact; checked that every cell's parent and every edge's
   ends exist, and rendered all three pages with the diagrams.net viewer to fix overlapping arrows.
+
+---
+
+## 2026-10-22 — Upload screen redesign
+
+Goal (Dan): make the first screen inviting and easy to use.
+
+### Changes
+
+- **Hero header** above the form: "AI tutor" pill, "Turn any file into a lesson", one-line explanation.
+- **Numbered sections** "1 Lesson material" / "2 How should the tutor teach it?" — each number turns into a
+  green ✓ when that part is filled in, so it's clear what's missing before "Start lesson" enables.
+- **`FilePicker.jsx`** (rewritten)
+  - Empty: a large drop zone (whole area clickable) with an upload icon, "Drop a file here or browse",
+    the accepted types as chips and the 10 MB limit; while dragging: "Drop it here", indigo highlight and a
+    slight scale-up.
+  - Chosen: a file card with a colored type badge (PDF / DOCX / TXT / MD / IMG), name (`dir="auto"`,
+    truncated), size, **Change** and **✕ remove** (`onClear`). Dropping another file on the card replaces it.
+  - One hidden `<input type="file">` opened from both buttons; its value is reset after each choice so
+    picking the same file again still works.
+- **Paste to upload** (`UploadScreen.jsx`): a file or screenshot pasted anywhere on the page (Ctrl/⌘+V)
+  becomes the lesson material — handy for a photo or screenshot of a textbook page.
+- **Example prompts**: "Try:" chips (the assignment's own example, "Explain like I'm 10", "Quiz me", and a
+  Hebrew one) fill the instructions in one click and focus the textarea; the active chip is highlighted.
+- **Character counter** `76/2000` inside the textarea (the server's limit).
+- **Ctrl/⌘ + Enter** in the textarea starts the lesson (shown as a tip in production).
+- **Start lesson** button: bigger, with an arrow; full width on phones.
+- **Uploading state**: an indigo panel with "Reading the file… 0:12", an **indeterminate progress bar**
+  (`.progress-indeterminate` keyframes in `index.css`) and Cancel, instead of a small spinner line.
+- **`components/Icons.jsx`** (new): small inline SVG icons (upload, close, check, arrow, sparkles) —
+  no icon library added.
+
+### Verified (browser)
+
+Empty state renders; pasting an image file → file card with IMG badge and section 1 ✓; example chip →
+prompt filled, textarea focused, section 2 ✓, Start enabled; submit with a held request → uploading panel
+with the animated bar → Cancel returns to the form without an error; 375 px: chips wrap, button full width,
+long file names truncate. `eslint` passes.

@@ -44,3 +44,16 @@
   overflow-x: auto;
   overflow-y: hidden;
 }
+
+/* An indeterminate progress bar: a segment sliding across while we wait. */
+@keyframes slide-across {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.progress-indeterminate {
+  animation: slide-across 1.4s ease-in-out infinite;
+}
