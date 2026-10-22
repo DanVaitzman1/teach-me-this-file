@@ -1,78 +1,68 @@
 import { PDFDocument } from 'pdf-lib';
 import { transcribe } from '../ai/transcribe.js';
+import { AppError } from '../errors.js';
 import { log } from '../logger.js';
 
-// One Gemini request writes its output token by token, so a long PDF in a
-// single request takes minutes. Small chunks sent in parallel finish much sooner.
 const PAGES_PER_CHUNK = 5;
+const MAX_PARALLEL = 2;
 
-// Kept low to stay under free-tier requests-per-minute limits.
-const MAX_PARALLEL = 4;
-
-// Transcribes the first `pageCount` pages of a pdf-lib PDFDocument.
-// pageTexts: the PDF's text layer per page (or null), passed along as a hint.
-// → [{ page, text }] numbered across the whole document.
-export async function transcribePdf({ pdf, pageCount, pageTexts, apiKey, signal }) {
-  const chunks = await splitPdf(pdf, pageCount);
-  log.info('pdf_split', { pages: pageCount, chunks: chunks.length, parallel: Math.min(MAX_PARALLEL, chunks.length) });
-
-  // If one chunk fails the upload fails, so cancel the others instead of paying for them.
-  const failed = new AbortController();
-  const chunkSignal = AbortSignal.any([signal, failed.signal]);
-
-  try {
-    const results = await mapWithLimit(chunks, MAX_PARALLEL, async ({ firstPage, lastPage, bytes }, index) => {
-      const pages = await transcribe({
-        apiKey,
-        buffer: Buffer.from(bytes),
-        mimeType: 'application/pdf',
-        signal: chunkSignal,
-        textLayer: textLayerFor(pageTexts, firstPage, lastPage),
-        label: `chunk ${index + 1}/${chunks.length} (pages ${firstPage}-${lastPage})`,
-      });
-      // Gemini numbers pages within the chunk, starting at 1.
-      return pages.map(({ page, text }) => ({ page: firstPage + page - 1, text }));
-    });
-    return results.flat();
-  } catch (err) {
-    failed.abort();
-    throw err;
-  }
-}
-
-async function splitPdf(pdf, pageCount) {
+// Only selected pages are copied. Each worker creates its next chunk on demand,
+// rather than retaining copies of every page while the AI is reading the first.
+export async function transcribePdf({ pdf, pageIndices, pageTexts, apiKey, signal }) {
   const chunks = [];
-  for (let start = 0; start < pageCount; start += PAGES_PER_CHUNK) {
-    const chunk = await PDFDocument.create();
-    const indices = [];
-    const end = Math.min(start + PAGES_PER_CHUNK, pageCount);
-    for (let i = start; i < end; i++) indices.push(i);
-    const pages = await chunk.copyPages(pdf, indices);
-    pages.forEach((page) => chunk.addPage(page));
-    chunks.push({ firstPage: start + 1, lastPage: end, bytes: await chunk.save() });
-  }
-  return chunks;
-}
-
-// The chunk's pages of the text layer, numbered like the chunk (from 1), or
-// null when there is no usable text (scanned pages, unreadable text layer).
-function textLayerFor(pageTexts, firstPage, lastPage) {
-  const pages = pageTexts?.slice(firstPage - 1, lastPage) ?? [];
-  if (pages.every((text) => !text.trim())) return null;
-  return pages.map((text, i) => `=== PAGE ${i + 1} ===\n${text.trim()}`).join('\n\n');
-}
-
-// Like Promise.all(items.map(fn)), but runs at most `limit` calls at a time.
-// fn gets (item, index).
-async function mapWithLimit(items, limit, fn) {
-  const results = new Array(items.length);
+  for (let i = 0; i < pageIndices.length; i += PAGES_PER_CHUNK) chunks.push(pageIndices.slice(i, i + PAGES_PER_CHUNK));
+  log.info('pdf_split', { pages: pageIndices.length, chunks: chunks.length, parallel: Math.min(MAX_PARALLEL, chunks.length) });
+  const failed = new AbortController();
+  const chunkSignal = AbortSignal.any([failed.signal, ...(signal ? [signal] : [])]);
   let next = 0;
+  const results = new Array(chunks.length);
+
+  async function read(indices, label) {
+    chunkSignal.throwIfAborted();
+    const chunk = await PDFDocument.create();
+    const copied = await chunk.copyPages(pdf, indices);
+    copied.forEach((page) => chunk.addPage(page));
+    const bytes = await chunk.save();
+    const hint = indices.map((index, i) => `=== PAGE ${i + 1} ===\n${pageTexts?.[index] ?? ''}`).join('\n\n');
+    return transcribe({ apiKey, buffer: Buffer.from(bytes), mimeType: 'application/pdf', signal: chunkSignal, textLayer: hint, label });
+  }
+
   async function worker() {
-    while (next < items.length) {
+    while (next < chunks.length) {
+      chunkSignal.throwIfAborted();
       const index = next++;
-      results[index] = await fn(items[index], index);
+      const indices = chunks[index];
+      const pages = await read(indices, `chunk ${index + 1}/${chunks.length}`);
+      const byPage = new Map();
+      for (const page of pages) {
+        if (!Number.isInteger(page.page) || page.page < 1 || page.page > indices.length || byPage.has(page.page)) {
+          throw new AppError(502, 'TRANSCRIPTION_INVALID', 'The AI returned inconsistent page numbers. Please retry.');
+        }
+        byPage.set(page.page, page.text);
+      }
+      // A missing page marker must never silently erase a page. Retry it alone;
+      // blank pages are valid, and still return an empty entry numbered 1.
+      for (let i = 0; i < indices.length; i++) {
+        if (byPage.has(i + 1)) continue;
+        const retry = await read([indices[i]], `missing page ${indices[i] + 1}`);
+        if (retry.length !== 1 || retry[0].page !== 1) {
+          throw new AppError(502, 'TRANSCRIPTION_INVALID', 'The AI omitted a page. Please retry.');
+        }
+        byPage.set(i + 1, retry[0].text);
+      }
+      results[index] = indices.map((original, i) => ({ page: original + 1, text: byPage.get(i + 1) }));
     }
   }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return results;
+
+  // Abort immediately on the first failure, and wait for sibling workers to
+  // release their buffers before releasing the upload's processing slot.
+  let firstError;
+  const workers = Array.from({ length: Math.min(MAX_PARALLEL, chunks.length) }, () => worker().catch((err) => {
+    firstError ??= err;
+    failed.abort();
+    throw err;
+  }));
+  await Promise.allSettled(workers);
+  if (firstError) throw firstError;
+  return results.flat();
 }

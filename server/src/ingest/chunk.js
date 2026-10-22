@@ -1,10 +1,5 @@
-// Passages are the unit the tutor cites as its source, so they should be
-// small enough to show next to a chat message.
-const MAX_PASSAGE_CHARS = 1200;
-
-// Caps what we send to the AI (cost, latency, free-tier limits).
-// Anything beyond it is dropped and reported as `truncated`.
-const MAX_DOCUMENT_CHARS = 200_000;
+import { MAX_DOCUMENT_CHARS, MAX_PASSAGE_CHARS, MAX_PASSAGES } from '../../../shared/documentLimits.mjs';
+import { AppError } from '../errors.js';
 
 // pages: [{ page, text }] → { passages: [{ id, page, text }], truncated }
 export function toPassages(pages) {
@@ -13,8 +8,8 @@ export function toPassages(pages) {
 
   for (const { page, text } of pages) {
     for (const chunk of chunkText(text)) {
-      if (totalChars + chunk.length > MAX_DOCUMENT_CHARS) {
-        return { passages, truncated: true };
+      if (totalChars + chunk.length > MAX_DOCUMENT_CHARS || passages.length >= MAX_PASSAGES) {
+        throw new AppError(413, 'DOCUMENT_TOO_LONG', 'This document exceeds 500,000 characters. Split it into chapters and upload one at a time.');
       }
       passages.push({ id: `p${passages.length + 1}`, page, text: chunk });
       totalChars += chunk.length;
@@ -40,12 +35,15 @@ function chunkText(text) {
 function splitLongParagraph(paragraph) {
   if (paragraph.length <= MAX_PASSAGE_CHARS) return [paragraph];
   const lines = paragraph.split('\n');
-  const pieces = pack(lines.flatMap(splitLongLine), '\n');
-
   const isTable = lines.length > 2 && lines[0].trim().startsWith('|') && /^[\s|:-]+$/.test(lines[1]);
-  if (!isTable) return pieces;
+  if (!isTable) return pack(lines.flatMap(splitLongLine), '\n');
   const header = `${lines[0]}\n${lines[1]}`;
-  return pieces.map((piece, index) => (index === 0 ? piece : `${header}\n${piece}`));
+  const available = MAX_PASSAGE_CHARS - header.length - 1;
+  // Very wide tables still retain their text; a header cannot consume a whole passage.
+  if (available < 100 || lines.slice(2).some((line) => line.length > available)) {
+    return pack(lines.flatMap(splitLongLine), '\n');
+  }
+  return pack(lines.slice(2), '\n', available).map((piece) => `${header}\n${piece}`);
 }
 
 function splitLongLine(line) {
@@ -60,11 +58,11 @@ function cutToLimit(text) {
 }
 
 // Greedily joins consecutive pieces while they fit in one passage.
-function pack(pieces, separator) {
+function pack(pieces, separator, limit = MAX_PASSAGE_CHARS) {
   const chunks = [];
   let current = '';
   for (const piece of pieces) {
-    if (current && current.length + separator.length + piece.length > MAX_PASSAGE_CHARS) {
+    if (current && current.length + separator.length + piece.length > limit) {
       chunks.push(current);
       current = piece;
     } else {

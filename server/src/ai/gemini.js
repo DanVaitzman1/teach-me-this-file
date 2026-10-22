@@ -2,6 +2,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { ApiError, GoogleGenAI } from '@google/genai';
 import { AppError } from '../errors.js';
 import { log } from '../logger.js';
+import { generateOnParent, isMainThread } from './workerBridge.js';
 
 // Models to try in order, per task. The next one is used when the previous one
 // is not available to this key (404; Gemini 2.5 models are closed to new users),
@@ -42,6 +43,7 @@ function createClient(apiKey) {
 // generateContent on the first model that is available and not overloaded.
 // `label` names the call in the logs (e.g. "transcribe chunk 2/4").
 export async function generateContent(apiKey, models, request, label) {
+  if (!isMainThread) return generateOnParent(models, request, label);
   const { result: response, model, ms } = await withModelFallback(apiKey, models, request, label, (client, req) =>
     client.models.generateContent(req),
   );

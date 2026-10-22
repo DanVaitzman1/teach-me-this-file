@@ -3,10 +3,12 @@ import { z } from 'zod';
 import { toAppError } from '../ai/gemini.js';
 import { createPlan } from '../ai/plan.js';
 import { openTutorStream, tutorEvents } from '../ai/tutor.js';
+import { LessonLabelsSchema, translateLabels } from '../ai/translateLabels.js';
 import { AppError } from '../errors.js';
 import { log } from '../logger.js';
 import { abortOnClose } from '../middleware/abortOnClose.js';
 import { requireApiKey } from '../middleware/requireApiKey.js';
+import { MAX_DOCUMENT_CHARS, MAX_PASSAGES, MAX_STEP_PASSAGES } from '../../../shared/documentLimits.mjs';
 
 // The server keeps no lesson state, so the client sends the document's
 // passages with the request. Limits match what /api/documents can produce.
@@ -18,7 +20,14 @@ const Passage = z.object({
 
 const PlanRequest = z.object({
   teacherPrompt: z.string().trim().min(1).max(2000),
-  passages: z.array(Passage).min(1).max(1000),
+  passages: z.array(Passage).min(1).max(MAX_PASSAGES)
+    .refine((passages) => passages.reduce((sum, passage) => sum + passage.text.length, 0) <= MAX_DOCUMENT_CHARS),
+});
+
+const LabelTranslationRequest = z.object({
+  language: z.enum(['en', 'he', 'ar', 'fr', 'es']),
+  labels: LessonLabelsSchema.refine((labels) => new Set(labels.steps.map((step) => step.id)).size === labels.steps.length,
+    'step ids must be unique'),
 });
 
 // One tutor message. 'start_step' asks the tutor to open the current step;
@@ -38,7 +47,7 @@ const TurnRequest = z
         .max(10),
     }),
     stepIndex: z.number().int().min(0),
-    passages: z.array(Passage).min(1).max(50),
+    passages: z.array(Passage).min(1).max(MAX_STEP_PASSAGES),
     messages: z.array(z.object({ role: z.enum(['tutor', 'student']), text: z.string().max(8000) })).max(20),
   })
   .refine((turn) => turn.stepIndex < turn.plan.steps.length, 'stepIndex is outside the plan')
@@ -57,6 +66,12 @@ lessonsRouter.post('/plan', requireApiKey, abortOnClose, async (req, res) => {
   const { teacherPrompt, passages } = parseBody(PlanRequest, req.body);
   const plan = await createPlan({ apiKey: req.apiKey, passages, teacherPrompt, signal: req.abortSignal });
   res.json(plan);
+});
+
+// Translate display labels without rebuilding the plan or changing lesson state.
+lessonsRouter.post('/labels', requireApiKey, abortOnClose, async (req, res) => {
+  const { language, labels } = parseBody(LabelTranslationRequest, req.body);
+  res.json(await translateLabels({ apiKey: req.apiKey, labels, language, signal: req.abortSignal }));
 });
 
 // Server-Sent Events: `delta` events with the tutor's text as it is written,

@@ -6,11 +6,14 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
+    "test": "node --test src/ai/*.test.js src/ingest/*.test.js src/routes/*.test.js",
     "start": "node src/index.js"
   },
   "dependencies": {
     "@google/genai": "^2.30.0",
+    "@xmldom/xmldom": "^0.8.15",
     "express": "^5.1.0",
+    "jszip": "3.10.2",
     "mammoth": "^1.13.0",
     "multer": "^2.5.0",
     "pdf-lib": "^1.17.1",
