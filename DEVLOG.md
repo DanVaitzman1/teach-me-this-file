@@ -1191,3 +1191,23 @@ middleware can buffer the SSE stream).
   saved in the macOS keychain. Global git config unchanged.
 - Created the **public** repo https://github.com/DanVaitzman1/teach-me-this-file and pushed `main`.
   Commits show author DanVaitzman1 with the personal email.
+
+---
+
+## 2026-10-22 — Live on Render 🚀
+
+**URL: https://teach-me-this-file.onrender.com**
+
+Render setup (done by Dan in the dashboard, step by step): Web Service from the GitHub repo, branch `main`,
+root directory empty, Build `npm run build`, Start `npm run start`, **Free** instance (0.1 CPU, 512 MB,
+spins down after inactivity — Render warns of ~50 s delays on wake-up), `NODE_ENV=production`.
+No `GEMINI_API_KEY` on the server: every user enters their own key in Settings, as the assignment asks.
+
+First deploy: build 50.7 s, "Deploy succeeded | Live"; the log shows the JSON `server_started` line with
+`servesClient: true` and the model lists. Render sets `PORT=10000`, picked up by `process.env.PORT`.
+
+**Verified on the live URL:** `/api/health` → `{"status":"ok","hasServerKey":false}`; `/` and an unknown
+path serve the app; favicon loads; `/api/nope` → JSON 404; in a browser the upload screen loads with the
+"Add a Gemini API key" banner, and the dev-only sample button is absent (production build).
+
+Every push to `main` now redeploys automatically.
