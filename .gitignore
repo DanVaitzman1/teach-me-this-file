@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.env.*
+.DS_Store
+*.log
+
+# Notes passed between Claude sessions, not part of the project.
+HANDOFF.md
