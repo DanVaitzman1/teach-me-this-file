@@ -1365,3 +1365,21 @@ timeline and green bar at 100%; 375 px layout. `eslint` passes, production build
 
 **Known gap:** on a phone the chat panel starts below the progress card, so the composer is reached by
 scrolling the page.
+
+---
+
+## 2026-10-22 — Phones: the answer box is always on screen
+
+**Problem:** on a phone the chat panel had a fixed `65dvh` height below the lesson header and progress
+card, so the answer box started below the fold and the student had to scroll the page to answer.
+
+**Change**
+- `LessonScreen.jsx`: on screens below `lg` the lesson is a flex column exactly one screen tall under the
+  app header (`h-[calc(100dvh-5.75rem)]`, `min-h-[28rem]` for very short screens); header and progress take
+  what they need and the chat section takes **the rest** (`flex-1 min-h-0`). Slightly tighter spacing on
+  phones; the step objective is hidden under `sm` (it's in the step header on larger screens).
+- `ChatPanel.jsx`: `flex-1 min-h-0` on phones (the message list scrolls inside), fixed height only from `lg`.
+- Desktop layout unchanged.
+
+**Verified (375 × 812):** page height = viewport (no page scroll), composer bottom at 773 px; opening "All
+steps" shrinks the chat instead of pushing the composer off screen. Desktop still two columns.

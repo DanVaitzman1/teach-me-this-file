@@ -78,7 +78,7 @@ export default function ChatPanel({ lesson, onSend, onStop, onRetry, onNewLesson
   }
 
   return (
-    <div className="flex h-[65dvh] min-h-96 flex-col lg:h-[calc(100dvh-15rem)]">
+    <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100dvh-15rem)] lg:flex-none">
       <div ref={listRef} onScroll={handleScroll} role="log" className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.map((message, index) => (
           <Fragment key={message.id}>
