@@ -1,12 +1,16 @@
+import { useT } from '../../i18n/context'
+
 // "Step 3 of 7", and a bar of how much of the lesson is done (completed steps).
 export default function LessonProgress({ current, done, total }) {
+  const t = useT()
   const finished = done === total
   const percent = Math.round((done / total) * 100)
+  const label = finished ? t('allStepsDone') : t('stepOf', { current, total })
 
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="font-semibold text-slate-900">{finished ? 'All steps done' : `Step ${current} of ${total}`}</p>
+        <p className="font-semibold text-slate-900">{label}</p>
         <p className="text-xs font-medium text-slate-500">{percent}%</p>
       </div>
       <div
@@ -14,7 +18,7 @@ export default function LessonProgress({ current, done, total }) {
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={done}
-        aria-label={finished ? 'All steps done' : `Step ${current} of ${total}`}
+        aria-label={label}
         className="h-2 overflow-hidden rounded-full bg-slate-200"
       >
         <div

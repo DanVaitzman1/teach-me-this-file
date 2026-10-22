@@ -23,8 +23,8 @@ export default function StepList({ steps, currentIndex }) {
                 state === 'done'
                   ? 'bg-indigo-600 text-white'
                   : state === 'current'
-                    ? 'bg-white text-indigo-700 ring-2 ring-indigo-600'
-                    : 'bg-white text-slate-400 ring-1 ring-slate-300'
+                    ? 'bg-surface text-indigo-700 ring-2 ring-indigo-600'
+                    : 'bg-surface text-slate-400 ring-1 ring-slate-300'
               }`}
             >
               {state === 'done' ? <CheckIcon className="size-3.5" /> : index + 1}

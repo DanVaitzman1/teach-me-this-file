@@ -5,6 +5,7 @@ import ErrorAlert from '../../components/ErrorAlert'
 import { ArrowRightIcon, CheckIcon, SparklesIcon } from '../../components/Icons'
 import FilePicker from './FilePicker'
 import { SAMPLE_DOCUMENT, SAMPLE_TEACHER_PROMPT } from './sampleDocument'
+import { useT } from '../../i18n/context'
 
 const MAX_FILE_MB = 10
 const MAX_PROMPT_CHARS = 2000
@@ -34,6 +35,7 @@ function SectionTitle({ number, done, children }) {
 }
 
 export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
+  const t = useT()
   const [file, setFile] = useState(null)
   const [teacherPrompt, setTeacherPrompt] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -94,22 +96,22 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
     <div className="space-y-6 py-2 sm:py-6">
       <div className="space-y-2 text-center">
         <p className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 ring-1 ring-indigo-100">
-          <SparklesIcon className="size-3.5" /> AI tutor
+          <SparklesIcon className="size-3.5" /> {t('heroBadge')}
         </p>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Turn any file into a lesson</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{t('heroTitle')}</h2>
         <p className="mx-auto max-w-md text-slate-600">
-          Upload the material, say how to teach it, and the tutor guides the student one step at a time.
+          {t('heroText')}
         </p>
       </div>
 
       <form
         ref={formRef}
         onSubmit={handleSubmit}
-        className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
+        className="space-y-6 rounded-2xl border border-slate-200 bg-surface p-5 shadow-sm sm:p-7"
       >
         <section className="space-y-3">
           <SectionTitle number={1} done={Boolean(file) && !error}>
-            <h3 className="font-semibold text-slate-900">Lesson material</h3>
+            <h3 className="font-semibold text-slate-900">{t('materialTitle')}</h3>
           </SectionTitle>
           <FilePicker file={file} onChange={chooseFile} onClear={clearFile} disabled={uploading} />
         </section>
@@ -117,7 +119,7 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
         <section className="space-y-3">
           <SectionTitle number={2} done={Boolean(teacherPrompt.trim())}>
             <label htmlFor="teacher-prompt" className="font-semibold text-slate-900">
-              How should the tutor teach it?
+              {t('promptTitle')}
             </label>
           </SectionTitle>
           <div className="relative">
@@ -133,7 +135,7 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
                 if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) formRef.current.requestSubmit()
               }}
               disabled={uploading}
-              placeholder="Who is the student, in which language, what style, how long…"
+              placeholder={t('promptPlaceholder')}
               className="w-full resize-y rounded-xl border border-slate-300 px-3.5 pt-3 pb-7 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50"
             />
             <span className="pointer-events-none absolute right-3 bottom-3 text-xs text-slate-400">
@@ -141,7 +143,7 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="py-1 text-xs text-slate-500">Try:</span>
+            <span className="py-1 text-xs text-slate-500">{t('tryExamples')}</span>
             {EXAMPLE_PROMPTS.map((example) => (
               <button
                 key={example.label}
@@ -152,7 +154,7 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
                 className={`rounded-full px-3 py-1 text-xs font-medium ring-1 transition-colors ${
                   teacherPrompt === example.text
                     ? 'bg-indigo-600 text-white ring-indigo-600'
-                    : 'bg-white text-slate-600 ring-slate-200 hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-200'
+                    : 'bg-surface text-slate-600 ring-slate-200 hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-200'
                 }`}
               >
                 {example.label}
@@ -167,20 +169,20 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
           <div role="status" className="space-y-3 rounded-xl bg-indigo-50 p-4">
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="font-medium text-indigo-900">
-                Reading the file… <ElapsedTime />
+                {t('readingFile')} <ElapsedTime />
               </span>
               <button
                 type="button"
                 onClick={() => abortRef.current.abort()}
                 className="rounded-lg px-3 py-1 font-medium text-indigo-700 hover:bg-indigo-100"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-indigo-100">
               <div className="progress-indeterminate h-full w-1/3 rounded-full bg-indigo-500" />
             </div>
-            <p className="text-xs text-indigo-800/70">PDFs and images are read by AI and can take up to a minute.</p>
+            <p className="text-xs text-indigo-800/70">{t('readingFileHelp')}</p>
           </div>
         ) : (
           <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -192,18 +194,18 @@ export default function UploadScreen({ apiKey, onUploaded, onOpenSettings }) {
                 }
                 className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50"
               >
-                Use sample document (dev)
+                {t('sampleDocument')}
               </button>
             ) : (
-              <span className="hidden text-xs text-slate-400 sm:block">Tip: Ctrl/⌘ + Enter starts the lesson</span>
+              <span className="hidden text-xs text-slate-400 sm:block">{t('submitTip')}</span>
             )}
             <button
               type="submit"
               disabled={!canSubmit}
-              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-500 hover:shadow-md disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
             >
-              Start lesson
-              <ArrowRightIcon className="size-4 transition-transform group-enabled:group-hover:translate-x-0.5" />
+              {t('startLesson')}
+              <ArrowRightIcon className="size-4 transition-transform rtl:rotate-180 group-enabled:group-hover:translate-x-0.5 rtl:group-enabled:group-hover:-translate-x-0.5" />
             </button>
           </div>
         )}

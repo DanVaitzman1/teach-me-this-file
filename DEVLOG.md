@@ -1383,3 +1383,57 @@ card, so the answer box started below the fold and the student had to scroll the
 
 **Verified (375 × 812):** page height = viewport (no page scroll), composer bottom at 773 px; opening "All
 steps" shrinks the chat instead of pushing the composer off screen. Desktop still two columns.
+
+---
+
+## 2026-10-22 — Settings: light / dark theme and interface language (English / Hebrew)
+
+### Preferences
+
+- **`features/settings/usePreferences.js`** (new): `{ theme: 'light' | 'dark' | 'system', language: 'en' | 'he' }`,
+  saved in **localStorage** (a per-device display choice, unlike the key and the lesson which stay in
+  sessionStorage). Effects apply them: the `dark` class on `<html>` (following the OS when "system", with a
+  live `prefers-color-scheme` listener), and `lang` / `dir` on `<html>` so the whole interface mirrors in
+  Hebrew.
+- **`index.html`**: a small inline script applies the saved theme and direction **before React loads**, so
+  the page doesn't flash light or left-to-right first.
+- **Settings dialog**: two segmented controls (radio-group semantics) at the top — Appearance: Light /
+  Dark / System; Language: English / עברית, with a note that the *lesson's* language comes from the teacher's
+  instructions. They apply immediately; the key form below still has Save.
+
+### Interface language
+
+- **`i18n/strings.js`** (new): every interface string in English and Hebrew; `{name}` placeholders.
+- **`i18n/context.js`** (new): `LanguageContext`, `useT()` → `t('stepOf', { current, total })` with English
+  fallback, and `useErrorMessage()` — API errors are translated **by code** (`error.AI_BUSY` …); unknown codes
+  keep the server's English message. The server stays English-only; only the client translates.
+- `App` now provides the language (React 19 `<LanguageContext value>`) and renders `AppContent`; all
+  components use `t()`. The example teacher prompts stay as written (they demonstrate prompts in different
+  languages). English error/UI text inside a Hebrew lesson gets `dir="auto"` so punctuation lands right.
+- The arrow on "Start lesson" flips in RTL.
+
+### Dark theme — design choice
+
+Rather than adding `dark:` variants to every element, **the palette is flipped**: Tailwind v4 colors are
+CSS variables, so under `html.dark` the light tints (50–200) are redefined as dark tints and the dark text
+shades (700–900) as light ones (slate, indigo, emerald, amber, red, plus the badge colors); the accent shades
+(400–600) stay. Components keep their classes and get a consistent dark look with ~50 lines of CSS.
+Consequences handled:
+- A new theme color **`surface`** (white / `#111827`) replaces `bg-white` for cards, panels, dialogs and
+  inputs (`to-white` gradients too) — `white` itself is not flipped, so white text on indigo buttons stays
+  white.
+- Button hovers went from `-700` to `-500` (a flipped 700 would be pale under white text).
+- The Stop button uses `gray-700` and the dialog backdrop `black/50` — colors outside the flipped palette.
+
+### Fixes found while testing
+
+- A failed tutor turn drew an **empty grey bubble** above the error; the bubble now renders only with text
+  or while streaming.
+- The key input is `dir="ltr"` (keys are Latin) with a normal-font placeholder.
+
+### Verified (browser)
+
+Dark + Hebrew: header, banner, Settings dialog, upload screen, lesson with bullets, KaTeX, "Step 1
+complete", translated `AI_BUSY` error with "לנסות שוב", source dialog with a table. Light + English after
+switching back. Preferences persist across reloads; `<html>` gets `dark`, `dir="rtl"`, `lang="he"`.
+`eslint` passes, production build OK.

@@ -1,10 +1,68 @@
 @import "tailwindcss";
 
-/* The app is light-themed; without this a dark-mode browser shows its own
-   dark page color behind semi-transparent backgrounds. */
+/* "surface" is the color of cards, panels and dialogs: white, or dark in the dark theme. */
+@theme {
+  --color-surface: #ffffff;
+}
+
 html {
   background-color: var(--color-slate-50);
   color-scheme: light;
+}
+
+/* Dark theme. Instead of a dark: variant on every element, the palette itself
+   is flipped: Tailwind's colors are CSS variables, so the light tints (50-200)
+   become dark tints and the dark text shades (700-900) become light ones.
+   Every component keeps its classes and gets a consistent dark look; the
+   strong accent shades (400-600) stay as they are. */
+html.dark {
+  color-scheme: dark;
+  --color-surface: #111827;
+
+  --color-slate-50: #0b1120;
+  --color-slate-100: #1e293b;
+  --color-slate-200: #334155;
+  --color-slate-300: #475569;
+  --color-slate-400: #7c8aa0;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #e2e8f0;
+  --color-slate-800: #f1f5f9;
+  --color-slate-900: #f8fafc;
+
+  --color-indigo-50: #1e1b4b;
+  --color-indigo-100: #312e81;
+  --color-indigo-200: #3730a3;
+  --color-indigo-700: #a5b4fc;
+  --color-indigo-800: #c7d2fe;
+  --color-indigo-900: #e0e7ff;
+
+  --color-emerald-50: #052e22;
+  --color-emerald-100: #064e3b;
+  --color-emerald-200: #065f46;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+
+  --color-amber-50: #2a1c06;
+  --color-amber-100: #451a03;
+  --color-amber-200: #78350f;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+
+  --color-red-50: #2b0b0b;
+  --color-red-100: #450a0a;
+  --color-red-200: #7f1d1d;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+
+  --color-rose-100: #4c0519;
+  --color-rose-700: #fda4af;
+  --color-sky-100: #082f49;
+  --color-sky-700: #7dd3fc;
+  --color-violet-100: #2e1065;
+  --color-violet-700: #c4b5fd;
 }
 
 /* Formulas are always written left to right, also inside right-to-left text,

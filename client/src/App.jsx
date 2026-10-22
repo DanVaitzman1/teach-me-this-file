@@ -5,11 +5,24 @@ import LessonScreen from './features/lesson/LessonScreen'
 import PlanningScreen from './features/lesson/PlanningScreen'
 import SettingsDialog from './features/settings/SettingsDialog'
 import { useApiKey } from './features/settings/useApiKey'
+import { usePreferences } from './features/settings/usePreferences'
 import UploadScreen from './features/upload/UploadScreen'
+import { LanguageContext, useT } from './i18n/context'
 import { useLesson } from './lesson/useLesson'
 import { useServerStatus } from './useServerStatus'
 
+// Holds the display preferences and provides the interface language below.
 function App() {
+  const [preferences, setPreference] = usePreferences()
+  return (
+    <LanguageContext value={preferences.language}>
+      <AppContent preferences={preferences} onPreferenceChange={setPreference} />
+    </LanguageContext>
+  )
+}
+
+function AppContent({ preferences, onPreferenceChange }) {
+  const t = useT()
   const server = useServerStatus()
   const [apiKey, setApiKey] = useApiKey()
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -44,7 +57,7 @@ function App() {
 
   return (
     <div className="min-h-dvh bg-gradient-to-b from-indigo-50/70 via-slate-50 to-slate-50 text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-surface/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
             <span className="grid size-8 place-items-center rounded-lg bg-indigo-600 text-white shadow-sm">
@@ -59,11 +72,11 @@ function App() {
             {server.status === 'ready' && (
               <span
                 className={`size-2 rounded-full ${hasKey ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                title={hasKey ? 'API key set' : 'No API key yet'}
+                title={hasKey ? t('keySet') : t('noKeyYet')}
               />
             )}
             <GearIcon className="size-4" />
-            Settings
+            {t('settings')}
           </button>
         </div>
       </header>
@@ -77,14 +90,13 @@ function App() {
               <KeyIcon className="size-5" />
             </span>
             <span className="min-w-0 flex-1">
-              <b className="font-semibold">Add your Gemini API key to start.</b> It’s free from Google AI Studio and
-              stays in this tab.
+              <b className="font-semibold">{t('keyBannerTitle')}</b> {t('keyBannerText')}
             </span>
             <button
               onClick={openSettings}
-              className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 font-medium text-white hover:bg-amber-700"
+              className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 font-medium text-white hover:bg-amber-500"
             >
-              Add key
+              {t('addKey')}
             </button>
           </div>
         )}
@@ -97,6 +109,8 @@ function App() {
           apiKey={apiKey}
           hasServerKey={server.hasServerKey}
           onSave={setApiKey}
+          preferences={preferences}
+          onPreferenceChange={onPreferenceChange}
           onClose={() => setSettingsOpen(false)}
         />
       )}

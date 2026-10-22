@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Teach Me This File</title>
+    <script>
+      // Apply the saved theme and language before the app loads, so the page
+      // doesn't flash light or left-to-right first (same key as usePreferences).
+      try {
+        const prefs = JSON.parse(localStorage.getItem('preferences')) || {}
+        const dark = prefs.theme === 'dark' || (prefs.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('dark', dark)
+        if (prefs.language === 'he') {
+          document.documentElement.lang = 'he'
+          document.documentElement.dir = 'rtl'
+        }
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

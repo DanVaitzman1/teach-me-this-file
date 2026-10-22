@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { CloseIcon, UploadIcon } from '../../components/Icons'
+import { useT } from '../../i18n/context'
 
 const ACCEPTED_EXTENSIONS = '.pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp'
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp']
@@ -26,6 +27,7 @@ function formatSize(bytes) {
 // Drop zone when empty; a card with the chosen file, "Change" and remove otherwise.
 // A file can also be dropped on the card to replace it.
 export default function FilePicker({ file, onChange, onClear, disabled }) {
+  const t = useT()
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef(null)
 
@@ -83,13 +85,13 @@ export default function FilePicker({ file, onChange, onClear, disabled }) {
             disabled={disabled}
             className="rounded-lg px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-100 disabled:opacity-50"
           >
-            Change
+            {t('change')}
           </button>
           <button
             type="button"
             onClick={onClear}
             disabled={disabled}
-            aria-label="Remove file"
+            aria-label={t('removeFile')}
             className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:opacity-50"
           >
             <CloseIcon className="size-4" />
@@ -115,21 +117,21 @@ export default function FilePicker({ file, onChange, onClear, disabled }) {
           </span>
           <span className="space-y-1">
             <span className="block font-medium text-slate-900">
-              {dragging ? 'Drop it here' : (
+              {dragging ? t('dropItHere') : (
                 <>
-                  Drop a file here or <span className="text-indigo-600 underline-offset-2 group-hover:underline">browse</span>
+                  {t('dropFileOr')} <span className="text-indigo-600 underline-offset-2 group-hover:underline">{t('browse')}</span>
                 </>
               )}
             </span>
-            <span className="block text-xs text-slate-500">You can also paste a screenshot of a page (Ctrl/⌘ + V)</span>
+            <span className="block text-xs text-slate-500">{t('pasteHint')}</span>
           </span>
           <span className="flex flex-wrap justify-center gap-1.5">
-            {['PDF', 'Word', 'Text', 'Markdown', 'Image'].map((type) => (
-              <span key={type} className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-500 ring-1 ring-slate-200">
+            {['PDF', 'Word', t('typeText'), 'Markdown', t('typeImage')].map((type) => (
+              <span key={type} className="rounded-full bg-surface px-2 py-0.5 text-xs text-slate-500 ring-1 ring-slate-200">
                 {type}
               </span>
             ))}
-            <span className="px-1 py-0.5 text-xs text-slate-400">up to 10 MB</span>
+            <span className="px-1 py-0.5 text-xs text-slate-400">{t('upTo10MB')}</span>
           </span>
         </button>
       )}

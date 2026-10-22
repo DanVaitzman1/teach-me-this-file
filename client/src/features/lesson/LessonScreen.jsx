@@ -3,8 +3,10 @@ import RichText from '../../components/RichText'
 import ChatPanel from '../chat/ChatPanel'
 import LessonProgress from './LessonProgress'
 import StepList from './StepList'
+import { useT } from '../../i18n/context'
 
 export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLesson }) {
+  const t = useT()
   const { plan, currentStepIndex, document } = lesson
   const step = plan.steps[currentStepIndex]
   const finished = lesson.status === 'finished'
@@ -12,7 +14,7 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
   const doneUpTo = finished ? plan.steps.length : currentStepIndex
 
   function confirmNewLesson() {
-    if (finished || window.confirm('Start a new lesson? This lesson will be lost.')) onNewLesson()
+    if (finished || window.confirm(t('confirmNewLesson'))) onNewLesson()
   }
 
   // The whole lesson takes the plan's direction, so in Hebrew or Arabic the
@@ -34,7 +36,7 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
             <span className="rounded-full bg-indigo-50 px-2.5 py-1 font-medium text-indigo-700 ring-1 ring-indigo-100">
               {plan.audience}
             </span>
-            <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-white px-2.5 py-1 text-slate-600 ring-1 ring-slate-200">
+            <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-slate-600 ring-1 ring-slate-200">
               <DocumentIcon className="size-3.5 shrink-0" />
               <span dir="auto" className="truncate">
                 {document.fileName}
@@ -44,24 +46,24 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
         </div>
         <button
           onClick={confirmNewLesson}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
+          className="rounded-lg border border-slate-300 bg-surface px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
         >
-          New lesson
+          {t('newLesson')}
         </button>
       </header>
 
       {document.truncated && (
         <p dir="auto" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
-          This file is long, so the lesson covers only its first part.
+          {t('longFile')}
         </p>
       )}
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:grid lg:grid-cols-[17rem_1fr] lg:gap-4">
-        <aside className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:sticky lg:top-20 lg:space-y-4 lg:self-start lg:p-4">
+        <aside className="space-y-3 rounded-2xl border border-slate-200 bg-surface p-3 shadow-sm lg:sticky lg:top-20 lg:space-y-4 lg:self-start lg:p-4">
           <LessonProgress current={Math.min(doneUpTo + 1, plan.steps.length)} done={doneUpTo} total={plan.steps.length} />
           {/* Phones: the outline folds away so the lesson stays on screen. */}
           <details className="lg:hidden">
-            <summary className="cursor-pointer text-sm font-medium text-slate-600">All steps</summary>
+            <summary className="cursor-pointer text-sm font-medium text-slate-600">{t('allSteps')}</summary>
             <div className="mt-3">
               <StepList steps={plan.steps} currentIndex={doneUpTo} />
             </div>
@@ -71,10 +73,10 @@ export default function LessonScreen({ lesson, onSend, onStop, onRetry, onNewLes
           </div>
         </aside>
 
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 bg-gradient-to-r from-indigo-50/80 to-white px-4 py-2.5 rtl:bg-gradient-to-l lg:py-3">
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-surface shadow-sm">
+          <div className="border-b border-slate-100 bg-gradient-to-r from-indigo-50/80 to-surface px-4 py-2.5 rtl:bg-gradient-to-l lg:py-3">
             <p className="text-xs font-semibold tracking-wide text-indigo-600 uppercase">
-              {finished ? 'Lesson complete' : `Step ${currentStepIndex + 1}`}
+              {finished ? t('lessonCompleteLabel') : t('stepLabel', { n: currentStepIndex + 1 })}
             </p>
             <h3 className="font-semibold text-slate-900">
               <RichText inline>{step.title}</RichText>

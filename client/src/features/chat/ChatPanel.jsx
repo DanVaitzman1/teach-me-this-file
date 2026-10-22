@@ -4,6 +4,7 @@ import RichText from '../../components/RichText'
 import Composer from './Composer'
 import Message from './Message'
 import SourceDialog from './SourceDialog'
+import { useT } from '../../i18n/context'
 
 // Distance from the bottom (px) within which new text keeps the view scrolled
 // down. Further up, the student is reading back and we leave the scroll alone.
@@ -11,11 +12,12 @@ const STICKY_BOTTOM_PX = 80
 
 // Between steps: a small "step done" badge, then the next step's name.
 function StepDivider({ index, title }) {
+  const t = useT()
   return (
     <div className="space-y-3 pt-2">
       {index > 0 && (
         <p dir="auto" className="message-in mx-auto flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
-          <CheckIcon className="size-3.5" /> Step {index} complete
+          <CheckIcon className="size-3.5" /> {t('stepComplete', { n: index })}
         </p>
       )}
       <p className="flex items-center gap-3 text-xs font-medium text-slate-500">
@@ -30,14 +32,15 @@ function StepDivider({ index, title }) {
 }
 
 function LessonComplete({ steps, onNewLesson }) {
+  const t = useT()
   return (
-    <div className="message-in space-y-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 text-center">
+    <div className="message-in space-y-4 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-surface p-5 text-center">
       <p className="pop-in text-4xl" aria-hidden="true">
         🎉
       </p>
       <div dir="auto" className="space-y-1">
-        <p className="text-lg font-bold text-emerald-900">Lesson complete!</p>
-        <p className="text-sm text-emerald-800">All {steps.length} steps done. Great work.</p>
+        <p className="text-lg font-bold text-emerald-900">{t('lessonCompleteTitle')}</p>
+        <p className="text-sm text-emerald-800">{t('lessonCompleteText', { n: steps.length })}</p>
       </div>
       <ul className="mx-auto max-w-sm space-y-1.5 text-start text-sm text-slate-700">
         {steps.map((step) => (
@@ -51,9 +54,9 @@ function LessonComplete({ steps, onNewLesson }) {
       </ul>
       <button
         onClick={onNewLesson}
-        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+        className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500"
       >
-        Start a new lesson
+        {t('startNewLesson')}
       </button>
     </div>
   )

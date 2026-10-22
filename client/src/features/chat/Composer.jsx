@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { SendIcon, StopIcon } from '../../components/Icons'
+import { useT } from '../../i18n/context'
 
 // Well under the server's limit per message; an answer to a tutor's question is short.
 const MAX_ANSWER_CHARS = 2000
@@ -9,6 +10,7 @@ const MAX_HEIGHT_PX = 160
 // The student's input. While the tutor is writing, the student can keep typing
 // but not send; the Send button becomes Stop.
 export default function Composer({ busy, streaming, onSend, onStop }) {
+  const t = useT()
   const [text, setText] = useState('')
   const textareaRef = useRef(null)
   const canSend = text.trim() && !busy
@@ -40,11 +42,11 @@ export default function Composer({ busy, streaming, onSend, onStop }) {
         event.preventDefault()
         send()
       }}
-      className="border-t border-slate-100 bg-white p-3"
+      className="border-t border-slate-100 bg-surface p-3"
     >
-      <div className="flex items-end gap-2 rounded-2xl border border-slate-300 bg-white p-1.5 ps-3 transition-shadow focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200">
+      <div className="flex items-end gap-2 rounded-2xl border border-slate-300 bg-surface p-1.5 ps-3 transition-shadow focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200">
         <label htmlFor="student-message" className="sr-only">
-          Your answer
+          {t('yourAnswer')}
         </label>
         <textarea
           id="student-message"
@@ -58,16 +60,16 @@ export default function Composer({ busy, streaming, onSend, onStop }) {
             resize()
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Write your answer…"
+          placeholder={t('answerPlaceholder')}
           className="max-h-40 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm focus:outline-none"
         />
         {streaming ? (
           <button
             type="button"
             onClick={onStop}
-            aria-label="Stop the answer"
-            title="Stop"
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-slate-800 text-white transition-colors hover:bg-slate-900"
+            aria-label={t('stop')}
+            title={t('stop')}
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-gray-700 text-white transition-colors hover:bg-gray-800"
           >
             <StopIcon className="size-4" />
           </button>
@@ -75,16 +77,16 @@ export default function Composer({ busy, streaming, onSend, onStop }) {
           <button
             type="submit"
             disabled={!canSend}
-            aria-label="Send"
-            title="Send"
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400"
+            aria-label={t('send')}
+            title={t('send')}
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-indigo-600 text-white transition-colors hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400"
           >
             <SendIcon className="size-4" />
           </button>
         )}
       </div>
       <p className="mt-1.5 hidden px-1 text-xs text-slate-400 sm:block">
-        {streaming ? 'The tutor is writing… you can stop it.' : 'Enter to send · Shift + Enter for a new line'}
+        {streaming ? t('stopHint') : t('enterHint')}
       </p>
     </form>
   )
