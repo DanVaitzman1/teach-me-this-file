@@ -1166,3 +1166,16 @@ the app, `/api/health` OK, `/api/nope` → JSON 404; logs are JSON lines.
 
 Note: the JS bundle is ~676 kB (mostly KaTeX), not compressed by Express. Left as is (compression
 middleware can buffer the SSE stream).
+
+---
+
+## 2026-10-22 — Git started
+
+- `git init -b main` with Dan's **personal** identity set for this repository only
+  (`git config --local user.name DanVaitzman1`, `user.email` his personal address); the machine's global
+  git identity (work account) is unchanged.
+- Before committing, scanned the staged files for API keys, tokens and the work email — none.
+- **One commit** with everything built so far (Dan's choice): `034605c Build Teach Me This File: upload,
+  lesson plan, streaming tutor`. Real timestamp; the history started late, and DEVLOG.md is the detailed
+  record of the steps. From here on, small commits per change.
+- Not pushed yet: `gh` is logged in to the work GitHub account, the repo belongs on the personal one.
